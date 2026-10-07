@@ -73,6 +73,44 @@
   .reglas h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--mana); margin: 12px 0 4px; }
   .reglas h3:first-child { margin-top: 0; }
   .reglas ul { padding-left: 18px; margin: 0; }
+  /* Reglas en láminas */
+  .ventana.reglas-v { width: 620px; }
+  .reglas.lam { max-height: 520px; display: flex; flex-direction: column; gap: 12px; font-size: 12.5px; }
+  .lam section { background: rgba(255, 252, 247, .6); border-radius: 16px; padding: 12px 14px; box-shadow: inset 0 0 0 1px rgba(160, 130, 90, .15); }
+  .lam h3 { margin: 0 0 8px; color: #8a6a4a; }
+  .lam p { margin: 8px 0 0; } .lam .r-nota { color: var(--suave); font-size: 11.5px; }
+  .r-fila { display: flex; gap: 6px; justify-content: center; }
+  .r-sant { width: 74px; height: 58px; border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 3px;
+    background: var(--mancha) center / 160% 130%; }
+  .r-pres { display: inline-block; width: 12px; height: 12px; background: var(--esf) center / contain no-repeat; }
+  .r-eras > div { display: flex; align-items: center; gap: 6px; font-size: 11px; padding: 4px 10px; }
+  .r-piedra { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 12px; padding-top: 2px; filter: saturate(.7); }
+  .r-anat { display: grid; grid-template-columns: 120px 1fr; gap: 14px; align-items: center; }
+  .r-anat ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .r-anat li { display: flex; align-items: center; gap: 10px; }
+  .r-anat li > .esf { flex: none; }
+  .r-carta { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; }
+  .r-carta .r-img { width: 96px; height: 96px; }
+  .r-img { object-fit: contain; }
+  .r-pasos { display: grid; grid-template-columns: 1fr 20px 1fr 20px 1fr; align-items: start; text-align: center; gap: 4px; }
+  .r-pasos > div:not(.r-flecha) { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .r-pasos span { font-size: 11px; color: var(--suave); text-transform: none; }
+  .r-flecha { align-self: center; color: #b49a7a; font-size: 18px; font-weight: 700; }
+  .r-icono { height: 64px; display: flex; align-items: center; justify-content: center; }
+  .r-icono .r-img { width: 64px; height: 64px; }
+  .r-bola { width: 56px !important; height: 56px !important; }
+  .r-acc { font-style: normal; color: #4f9a5f; font-weight: 700; } .r-mana { font-style: normal; color: #957088; font-weight: 700; }
+  .r-elem { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
+  .r-elem > div { display: flex; flex-direction: column; align-items: center; gap: 3px; border-radius: 12px; padding: 8px 4px; background: var(--mancha) center / 160% 130%; }
+  .r-elem .r-img { width: 62px; height: 62px; }
+  .r-elem span { font-size: 10.5px; text-transform: none; color: #5b4a35; line-height: 1.3; }
+  .r-consejo { background: rgba(207, 192, 246, .35) !important; }
+  .movil .r-anat { grid-template-columns: 90px 1fr; } .movil .r-carta .r-img { width: 80px; height: 80px; }
+  .movil .r-carta .esferas { display: none; }
+  .movil .r-pasos { grid-template-columns: 1fr 14px 1fr 14px 1fr; }
+  .movil .r-elem { grid-template-columns: repeat(2, 1fr); }
+  .movil .r-sant { width: 64px; }
+  .movil .reglas.lam { max-height: none; }
   .registro-btn { color: var(--suave); font-size: 11px; text-decoration: underline; cursor: pointer; margin-left: 6px; }
 
   /* Guía: mensajes flotantes que explican el siguiente paso */
@@ -231,7 +269,7 @@
   /* Ventanas */
   .velo { position: fixed; inset: 0; z-index: 100; background: rgba(29, 29, 31, .4); display: none; align-items: center; justify-content: center; }
   .velo.abierta { display: flex; }
-  .ventana { width: 340px; max-height: 92%; overflow: auto; background: #fff; border-radius: 22px; padding: 26px 26px 22px; display: flex; flex-direction: column;
+  .ventana { width: 340px; max-height: 92%; overflow: auto; background: #fbf6ef url(texturas/fondo.webp) center / cover; border-radius: 22px; padding: 26px 26px 22px; display: flex; flex-direction: column;
     align-items: center; gap: 10px; box-shadow: 0 24px 60px rgba(0,0,0,.25); text-align: center; }
   .ventana.ancha { width: 520px; }
   .ventana h2 { font-size: 17px; }
@@ -1139,26 +1177,51 @@ function finPartida() {
     [{ texto: 'Ver registro', accion: verRegistro }, { texto: 'Copiar registro', cierra: false, accion: copiarRegistro }, { texto: 'Otra partida', clase: 'verde', accion: inicio }], true, true);
 }
 
+// Reglas en láminas: dibujos del propio juego (esferas, Elementales, Santuarios) y poco texto
 function verReglas() {
-  abrir(`<h2>Reglas</h2><div class="reglas">
-    <h3>Objetivo</h3>Eres un Guardián. Vincula Elementales y pon Presencia en los cuatro Santuarios. Al final de cada Era, quien tiene más Presencia en un Santuario gana sus Sellos: 1 en la Era I, 2 en la II y 3 en la III. Tras 3 Eras gana quien tenga más Sellos.
-    <h3>Tu turno</h3><ul>
-      <li>Juega las cartas de tu mano de una en una. Cada carta se usa <b>como Acción</b> (esfera de color) <b>o como Maná</b> (esfera lila), nunca las dos.</li>
-      <li><b>Vincula</b> 1 Elemental del Umbral pagando su coste (esfera gris). Va a tu Reserva y volverá a tu mano más adelante.</li>
-      <li><b>Libera</b> 1 carta inicial jugada este turno pagando 2 Maná: sale de la partida y tus cartas mejoran.</li>
-      <li>Al terminar, descartas todo y robas 5. El Maná que no gastes se pierde.</li></ul>
-    <h3>Las cartas</h3><ul>
-      <li>Esferas en orden <b>Coste · Maná · Acción</b>. Las cartas iniciales no tienen coste.</li>
-      <li>Acción de color de un Santuario (+1, +2…): pones Presencias tuyas allí.</li>
-      <li>Fuego retira Presencias rivales, Aire las mueve, Tierra protege las tuyas, Agua juega con las cartas.</li>
-      <li>Una Presencia protegida no se puede retirar ni mover hasta el final de la Era.</li></ul>
-    <h3>Eras y empates</h3><ul>
-      <li>Cada Era dura 5 rondas. Al acabar se puntúa, se vacían los Santuarios y se renueva el Umbral. Tus cartas se conservan.</li>
-      <li>Si dos empatan en cabeza en un Santuario, nadie gana sus Sellos.</li>
-      <li>Empieza cada Era quien tiene más Sellos.</li>
-      <li>Empate final: gana quien consiguió más Sellos en la Era III.</li></ul>
-    </div>`, [{ texto: 'Cerrar', clase: 'lleno' }], true);
+  const C = require('cartas');
+  const carta = (n) => [...C.UMBRAL, ...C.INICIAL].find((x) => x.nombre === n);
+  const img = (n, cls = '') => `<img class="r-img ${cls}" src="${imagen(carta(n)) || IMAGENES[n]}" alt="${n}">`;
+  const piedra = (el, t = '') => `<span class="piedra esf-${el} r-piedra">${t}</span>`;
+  const fila = (el, n) => Array.from({ length: n }, () => `<i class="r-pres esf-${el}"></i>`).join('');
+  const mini = (c) => `<div class="r-carta">${img(c.nombre)}<b>${c.nombre}</b>${esferas(c, c.coste)}</div>`;
+  const ig = carta('Ígneo');
+  abrir(`<h2>Cómo se juega</h2><div class="reglas lam">
+    <section><h3>1 · El objetivo</h3>
+      <div class="r-fila">${EL.map((s) => `<div class="r-sant tx-${s}"><div>${fila(PIEZA[s][0], 3)}</div><div>${fila(PIEZA[s][1], 1)}</div></div>`).join('')}</div>
+      <p>Pon <b>Presencia</b> en los cuatro Santuarios. Al final de cada Era, quien tiene <b>más</b> en un Santuario gana sus Sellos. Solo el primero: ser segundo no da nada.</p>
+      <div class="r-fila r-eras"><div><b>Era I</b>${piedra('aire', 1)}</div><div><b>Era II</b>${piedra('aire', 2)}</div><div><b>Era III</b>${piedra('aire', 3)}</div></div>
+      <p class="r-nota">Tras 3 Eras gana quien tenga más Sellos. Empate en cabeza en un Santuario: nadie lo gana.</p></section>
+    <section><h3>2 · Cada carta tiene tres esferas</h3>
+      <div class="r-anat">${mini(ig)}<ul>
+        <li><span class="esf c">4</span><span><b>Coste</b>: Maná para vincularla desde el Umbral.</span></li>
+        <li><span class="esf m">2</span><span><b>Maná</b>: lo que da si la usas como Maná.</span></li>
+        <li>${accion(partesDe(ig))}<span><b>Acción</b>: lo que hace si la juegas. El color dice el Santuario.</span></li></ul></div></section>
+    <section><h3>3 · Tu turno</h3>
+      <div class="r-pasos">
+        <div><div class="r-icono">${img('Chispa')}</div><b>Juega tu Ofrenda</b><span>Cada carta: <em class="r-acc">Acción</em> o <em class="r-mana">Maná</em>, nunca las dos.</span></div>
+        <div class="r-flecha">→</div>
+        <div><div class="r-icono">${img('Magma')}</div><b>Vincula 1</b><span>Paga su coste y va a tu Reserva.</span></div>
+        <div class="r-flecha">→</div>
+        <div><div class="r-icono"><span class="dorso r-bola"></span></div><b>Roba 5</b><span>El Maná que sobra se pierde.</span></div></div>
+      <p class="r-nota">Extra: paga <b>2 de Maná</b> para <b>liberar</b> una carta inicial jugada este turno. Sale de la partida y tus cartas mejoran.</p></section>
+    <section><h3>4 · Cada elemento juega distinto</h3>
+      <div class="r-elem">
+        <div class="tx-fuego">${img('Ígneo')}<b>Fuego</b><span>Retira Presencias rivales</span></div>
+        <div class="tx-aire">${img('Vórtice')}<b>Aire</b><span>Mueve Presencias</span></div>
+        <div class="tx-tierra">${img('Bastión')}<b>Tierra</b><span>Protege las tuyas hasta fin de Era</span></div>
+        <div class="tx-agua">${img('Marea')}<b>Agua</b><span>Roba y recupera cartas</span></div></div></section>
+    <section><h3>5 · Las Eras</h3>
+      <div class="r-pasos">
+        <div><b>5 rondas</b><span>Todos juegan 5 turnos.</span></div><div class="r-flecha">→</div>
+        <div><b>Se puntúa</b><span>Sellos al primero de cada Santuario.</span></div><div class="r-flecha">→</div>
+        <div><b>Se vacía</b><span>Santuarios y Umbral nuevos. Tus cartas se quedan.</span></div></div>
+      <p class="r-nota">Empieza cada Era quien va primero en Sellos. Empate final: gana quien hizo más Sellos en la Era III.</p></section>
+    <section class="r-consejo"><h3>Consejo</h3><p>Mejor ganar <b>dos</b> Santuarios que ser segundo en los cuatro. Ataca a quien va justo por delante de ti y protege al final de la Era.</p></section>
+    </div>`, [{ texto: 'Entendido', clase: 'verde' }], true);  $('ventana').classList.add('reglas-v');
 }
+// Colores de ejemplo para la lámina del objetivo: quién lidera cada Santuario
+const PIEZA = { fuego: ['fuego', 'agua'], agua: ['agua', 'tierra'], tierra: ['tierra', 'aire'], aire: ['aire', 'fuego'] };
 
 // ---------- Inicio: nombre, contra bots o con amigos -------------------------------------------
 const leerNombre = () => { try { return localStorage.getItem('mana-nombre') || ''; } catch (e) { return ''; } };
