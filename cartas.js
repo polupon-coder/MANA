@@ -1,0 +1,91 @@
+'use strict';
+// MANA — tablas del reglamento provisional (secciones 12 y 27-30).
+// Cada acción es una lista de efectos que interpreta motor.js.
+//   add:      +N Presencia en un Santuario (prot: protegidas)
+//   remove:   retira hasta N Presencias rivales de un Santuario (s: '*' = uno cualquiera, el mismo para todas)
+//   draw:     roba N            discard: descarta N de la mano
+//   topFromDiscard: pon 1 carta del descarte sobre el mazo
+//   handToTop: pon 1 carta de la mano sobre el mazo
+//   recover:  1 carta del descarte a la mano
+//   protect:  protege hasta N Presencias propias (s: '*' = en cualquier Santuario; all: todas las de un Santuario)
+//   ifAny:    solo si ya tienes Presencia en ese Santuario
+//   ifBehind: +a si un rival tiene más que tú, si no +b
+//   moveRival: mueve hasta N Presencias rivales DESDE el Santuario (s: '*' = desde cualquiera)
+//   moveOwnTo: mueve 1 Presencia propia HACIA el Santuario
+//   disrupt:  un rival descarta 1 y roba 1 (modo 'todos': cada rival descarta 1 que elige él, sin robar)
+//   swap:     retira 1 Presencia rival de un Santuario y pon 1 tuya en ese Santuario
+//   refresh:  cambia 1 carta del Umbral
+
+const ELEMENTOS = ['fuego', 'agua', 'tierra', 'aire'];
+
+const C = (nombre, el, coste, mana, accion, inicial = false) => ({ nombre, el, coste, mana, accion, inicial });
+
+// Reglamento provisional v0.1 (se conserva para comparar).
+const UMBRAL_V01 = [
+  C('Ascua', 'fuego', 2, 1, [{ add: 1, s: 'fuego' }]),
+  C('Llama', 'fuego', 3, 1, [{ add: 2, s: 'fuego' }]),
+  C('Fulgor', 'fuego', 2, 1, [{ draw: 1 }]),
+  C('Brasa', 'fuego', 3, 1, [{ remove: 1, s: 'fuego' }]),
+  C('Ígneo', 'fuego', 4, 2, [{ add: 1, s: 'fuego' }, { remove: 1, s: 'fuego' }]),
+  C('Inferno', 'fuego', 4, 2, [{ ifBehind: [2, 1], s: 'fuego' }]),
+  C('Magma', 'fuego', 5, 2, [{ remove: 2, s: 'fuego' }]),
+  C('Volcán', 'fuego', 6, 3, [{ add: 2, s: 'fuego' }, { remove: 1, s: 'fuego' }]),
+
+  C('Gota', 'agua', 2, 1, [{ add: 1, s: 'agua' }]),
+  C('Onda', 'agua', 3, 1, [{ add: 2, s: 'agua' }]),
+  C('Corriente', 'agua', 2, 1, [{ draw: 1 }]),
+  C('Flujo', 'agua', 3, 1, [{ draw: 2 }, { discard: 1 }]),
+  C('Torrente', 'agua', 3, 1, [{ topFromDiscard: 1 }]),
+  C('Marea', 'agua', 4, 2, [{ draw: 2 }, { handToTop: 1 }]),
+  C('Abismo', 'agua', 5, 2, [{ recover: 1 }]),
+  C('Océano', 'agua', 6, 3, [{ add: 2, s: 'agua' }, { topFromDiscard: 1 }]),
+
+  C('Polvo', 'tierra', 2, 1, [{ add: 1, s: 'tierra' }]),
+  C('Roca', 'tierra', 3, 1, [{ add: 2, s: 'tierra' }]),
+  C('Raíz', 'tierra', 2, 1, [{ draw: 1 }]),
+  C('Pedregal', 'tierra', 3, 1, [{ protect: 1, s: 'tierra' }]),
+  C('Bastión', 'tierra', 4, 2, [{ add: 1, s: 'tierra', prot: true }]),
+  C('Monolito', 'tierra', 4, 2, [{ ifAny: 2, s: 'tierra' }]),
+  C('Peñón', 'tierra', 5, 2, [{ protect: 2, s: 'tierra' }]),
+  C('Montaña', 'tierra', 6, 3, [{ add: 2, s: 'tierra', prot: true }]),
+
+  C('Brisa', 'aire', 2, 1, [{ add: 1, s: 'aire' }]),
+  C('Soplo', 'aire', 3, 1, [{ add: 2, s: 'aire' }]),
+  C('Ráfaga', 'aire', 2, 1, [{ draw: 1 }]),
+  C('Velo', 'aire', 3, 1, [{ disrupt: 1 }]),
+  C('Remolino', 'aire', 3, 1, [{ refresh: 1 }]),
+  C('Vórtice', 'aire', 4, 2, [{ moveRival: 1, s: 'aire' }]),
+  C('Ciclón', 'aire', 4, 2, [{ moveOwnTo: 'aire' }, { draw: 1 }]),
+  C('Tormenta', 'aire', 6, 3, [{ moveRival: 2, s: 'aire' }, { add: 1, s: 'aire' }]),
+];
+
+// v0.2: el Fuego retira y el Aire mueve en cualquier Santuario, la Tierra protege en cualquiera,
+// cartas de coste 5 mejoradas y las cuatro cartas que rendían menos que una Mota reforzadas.
+const cambios = {
+  'Brasa': [{ swap: 1, s: 'fuego' }],
+  Ígneo: [{ add: 1, s: 'fuego' }, { remove: 1, s: '*' }],
+  'Magma': [{ remove: 2, s: '*' }, { add: 1, s: 'fuego' }],
+  'Volcán': [{ add: 2, s: 'fuego' }, { remove: 1, s: '*' }],
+  'Abismo': [{ recover: 1 }, { draw: 1 }],
+  Torrente: [{ draw: 1 }, { topFromDiscard: 1 }],
+  Pedregal: [{ protect: 2, s: '*' }, { draw: 1 }],
+  'Peñón': [{ protect: 1, all: true, s: '*' }, { add: 1, s: 'tierra', prot: true }],
+  Velo: [{ add: 1, s: 'aire' }, { disrupt: 1, modo: 'todos' }],
+  'Remolino': [{ draw: 1 }, { refresh: 1 }],
+  Vórtice: [{ moveRival: 1, s: '*' }],
+  'Tormenta': [{ moveRival: 2, s: '*' }, { add: 1, s: 'aire' }],
+};
+const UMBRAL = UMBRAL_V01.map((c) => (cambios[c.nombre] ? { ...c, accion: cambios[c.nombre] } : c));
+
+const INICIAL = [
+  ...ELEMENTOS.flatMap((el) => {
+    // Elementales menores: una sola palabra, como el resto
+    const nombre = { fuego: 'Chispa', agua: 'Rocío', tierra: 'Grano', aire: 'Aliento' }[el];
+    const c = C(nombre, el, 0, 1, [{ add: 1, s: el }], true);
+    return [c, c];
+  }),
+  C('Mota', null, 0, 1, [], true),
+  C('Mota', null, 0, 1, [], true),
+];
+
+module.exports = { ELEMENTOS, UMBRAL, UMBRAL_V01, INICIAL };

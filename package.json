@@ -1,0 +1,16 @@
+{
+  "name": "mana",
+  "version": "0.2.0",
+  "description": "MANA — juego de cartas de Guardianes y Elementales, para jugar con amigos por internet",
+  "main": "servidor/servidor.js",
+  "scripts": {
+    "start": "node servidor/servidor.js",
+    "construir": "node web/construir.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
