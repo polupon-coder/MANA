@@ -340,6 +340,7 @@ class Partida {
         r.mano.sort((a, b) => fuerza(a, this.v) - fuerza(b, this.v));
         const c = modo === 'rival' || modo === 'todos' ? r.mano.shift() : r.mano.pop();
         r.desc.push(c);
+        this.nota('pierde', c, r.i);
         const robo = modo === 'rival' || modo === 'activo';
         // lo que pierde el rival, repartido entre los rivales
         this.extra[i] += (w * (fuerza(c, this.v) - (robo ? m : 0))) / (this.n - 1);
@@ -374,8 +375,8 @@ class Partida {
     return lista;
   }
 
-  nota(tipo, carta) {
-    if (this.captura) this.captura.notas.push({ tipo, carta: carta.nombre });
+  nota(tipo, carta, k) {
+    if (this.captura) this.captura.notas.push({ tipo, carta: carta.nombre, ...(k === undefined ? {} : { k }) });
   }
 
   anotar(entrada) {

@@ -768,9 +768,13 @@ function describir(e) {
     if (n.tipo === 'descarta') partes.push(yo ? `descartas ${n.carta}` : 'descarta 1');
     if (n.tipo === 'encima') partes.push(yo ? `pones ${n.carta} encima de tu Fuente (la robarás en tu próximo turno)` : 'pone 1 carta encima de su Fuente');
     if (n.tipo === 'recupera') partes.push(yo ? `recuperas <b>${n.carta}</b> a tu mano` : 'recupera 1 carta');
+    // cartas que una Acción ajena (Velo) obliga a descartar de la mano
+    if (n.tipo === 'pierde') partes.push(n.k === YO ? `<b>te hace descartar ${n.carta}</b>` : `${NOMBRES[n.k]} descarta 1`);
   }
   return `${yo ? 'Juegas' : quien + ' juega'} <b>${e.carta}</b>${partes.length ? ': ' + partes.join(' · ') : ''}`;
 }
+// Jugadas ajenas que te quitan cartas de la mano: su aviso dura más
+const teAfecta = (e) => (e.notas || []).some((n) => n.tipo === 'pierde' && n.k === YO);
 function verRegistro() {
   const filas = p.registro.filter((e) => e.tipo !== 'fin').slice().reverse()
     .map((e) => `<div>Era ${ROMANO[e.era]} · ${describir(e)}</div>`).join('') || '<div>Todavía no ha pasado nada.</div>';
@@ -1059,7 +1063,7 @@ function continuar() {
     p.turnoBot(i);
     const hechos = p.registro.slice(desde).filter((e) => e.tipo !== 'fin');
     if (!hechos.length) avisar(`${NOMBRES[i]} no juega Acciones ni vincula`);
-    hechos.forEach((e, k) => setTimeout(() => avisar(describir(e), 2200), k * 450 * VEL));
+    hechos.forEach((e, k) => setTimeout(() => avisar(describir(e), teAfecta(e) ? 6000 : 2200), k * 450 * VEL));
     pintar();
     setTimeout(() => { ocupado = false; trasTurno(() => p.terminarTurno()); }, (700 + hechos.length * 450) * VEL);
   }, 650 * VEL);
@@ -1331,7 +1335,7 @@ function escuchar() {
     pasos = [];
     nuevas = [];
     if (nuevo) { vistos.clear(); cerrar(); bienvenida(); }
-    else p.registro.slice(antes).filter((e) => e.i !== YO && e.tipo !== 'fin').forEach((e, k) => setTimeout(() => avisar(describir(e), 2200), k * 450));
+    else p.registro.slice(antes).filter((e) => e.i !== YO && e.tipo !== 'fin').forEach((e, k) => setTimeout(() => avisar(describir(e), teAfecta(e) ? 6000 : 2200), k * 450));
     if (!nuevo && p.jug[0].selloEra.length > eraAntes) return finEra();
     continuar();
   }, () => avisar('Se ha perdido la conexión con la partida. Recarga la página.'));
