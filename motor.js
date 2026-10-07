@@ -77,8 +77,18 @@ class Partida {
     this.rng = rngFrom(opciones.seed || 1);
     this.n = n;
     this.jug = [];
-    // Guardianes de color: cada jugador es de un elemento distinto (por sorteo)
-    const colores = this.v.afinidad ? shuffle(ELEMENTOS.slice(), this.rng) : null;
+    // Guardianes de color: cada jugador es de un elemento distinto. opciones.elegidos[i] fija el
+    // elemento del asiento i (el primero que lo pide se lo queda); el resto, por sorteo
+    let colores = this.v.afinidad ? shuffle(ELEMENTOS.slice(), this.rng) : null;
+    if (colores && opciones.elegidos) {
+      const fijos = Array(n).fill(null);
+      for (let i = 0; i < n; i++) {
+        const e = opciones.elegidos[i];
+        if (ELEMENTOS.includes(e) && !fijos.includes(e)) fijos[i] = e;
+      }
+      const libres = colores.filter((e) => !fijos.includes(e));
+      colores = fijos.map((e) => e || libres.shift());
+    }
     for (let i = 0; i < n; i++) {
       const ini = this.v.inicial.slice();
       if (colores && this.v.afinidad.includes('mazo')) ini[ini.findIndex((c) => c.nombre === 'Mota')] = ini.find((c) => c.el === colores[i]);

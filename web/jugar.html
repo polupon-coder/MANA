@@ -64,6 +64,14 @@
   .unirse input { letter-spacing: .3em; }
   .enlace { display: grid; grid-template-columns: 1fr 100px; gap: 8px; width: 100%; }
   .enlace input { width: 100%; border: 1.5px solid var(--linea); border-radius: 12px; padding: 9px 10px 7px; font: inherit; font-size: 11px; text-transform: none; background: rgba(255,255,255,.7); color: var(--tinta); }
+  /* Elegir elemento al empezar */
+  .elige-el { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; }
+  .op-el { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 2px 6px; border-radius: 14px; cursor: pointer; font-size: 10px; font-weight: 700; color: #6b5a43;
+    background: #efe6da url(texturas/fondo.webp) center / cover; background-blend-mode: multiply;
+    box-shadow: inset 2px 3px 6px rgba(60, 35, 10, .22), inset -2px -2px 5px rgba(255, 255, 255, .6); }
+  .op-el .piedra, .op-el .azar { width: 30px; height: 30px; }
+  .op-el .azar { display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(107, 90, 67, .15); font-size: 16px; }
+  .op-el.elegida { background-color: #cfc0f6; color: #fff; text-shadow: 0 1px 2px rgba(70, 40, 130, .45); box-shadow: inset 3px 5px 9px rgba(60, 35, 10, .42); }
   .codigo-grande { font-size: 40px; font-weight: 700; letter-spacing: .3em; padding-left: .3em; color: var(--mana); }
   .plazas { width: 100%; display: flex; flex-direction: column; gap: 6px; }
   .plaza { border: 1.5px solid var(--linea); border-radius: 12px; padding: 8px 12px 6px; text-align: left; }
@@ -1054,7 +1062,7 @@ const NOMBRES_BOT = ['Ana', 'Pol', 'Marc', 'Lía'];
 function empezarPartida(lista, semilla) {
   asientos = lista;
   NOMBRES = lista.map((a) => a.nombre);
-  p = new Partida(lista.length, { seed: semilla, registro: true }).iniciar();
+  p = new Partida(lista.length, { seed: semilla, registro: true, elegidos: lista.map((a) => a.elemento) }).iniciar();
   vistos.clear();
   ocupado = false;
   entreEras = false;
@@ -1065,11 +1073,11 @@ function empezarPartida(lista, semilla) {
   continuar();
 }
 
-function nuevaPartida(n, nombre) {
+function nuevaPartida(n, nombre, elemento) {
   red = null;
   YO = 0;
   const bots = NOMBRES_BOT.filter((x) => x.toLowerCase() !== (nombre || '').toLowerCase());
-  empezarPartida([{ nombre: nombre || 'Tú', bot: false }, ...bots.slice(0, n - 1).map((x) => ({ nombre: x, bot: true }))],
+  empezarPartida([{ nombre: nombre || 'Tú', bot: false, elemento }, ...bots.slice(0, n - 1).map((x) => ({ nombre: x, bot: true }))],
     Math.floor(Math.random() * 1e9));
 }
 
@@ -1227,6 +1235,9 @@ const PIEZA = { fuego: ['fuego', 'agua'], agua: ['agua', 'tierra'], tierra: ['ti
 const leerNombre = () => { try { return localStorage.getItem('mana-nombre') || ''; } catch (e) { return ''; } };
 const guardarNombre = (n) => { try { localStorage.setItem('mana-nombre', n); } catch (e) { /* sin almacenamiento */ } };
 const limpiarNombre = (n) => n.replace(/[<>&"]/g, '').trim().slice(0, 14);
+// Elemento elegido al empezar (null: al azar); se recuerda para la próxima vez
+let elementoElegido = (() => { try { const e = localStorage.getItem('mana-elemento'); return EL.includes(e) ? e : null; } catch (x) { return null; } })();
+const guardarElemento = (e) => { try { if (e) localStorage.setItem('mana-elemento', e); else localStorage.removeItem('mana-elemento'); } catch (x) { /* sin almacenamiento */ } };
 const nombreElegido = () => { const n = limpiarNombre($('nombre').value) || 'Tú'; guardarNombre(n); return n; };
 
 function inicio() {
@@ -1245,7 +1256,7 @@ function inicio() {
          <div class="nota" id="aviso-red"></div>`;
     if (modo === 'bots') {
       $('opciones').onclick = (e) => { const o = e.target.closest('[data-n]'); if (o) { n = Number(o.dataset.n); $('opciones').innerHTML = opcionesBots(); } };
-      $('empezar-bots').onclick = () => { cerrar(); nuevaPartida(n, nombreElegido()); };
+      $('empezar-bots').onclick = () => { cerrar(); nuevaPartida(n, nombreElegido(), elementoElegido); };
     } else {
       $('crear').onclick = () => crearSala(nombreElegido());
       $('unirme').onclick = () => unirseSala(nombreElegido(), $('codigo').value);
@@ -1254,9 +1265,16 @@ function inicio() {
   };
   abrir(`<img class="titulo-inicio" src="url(texturas/titulo.webp)" alt="MANA">
     <input id="nombre" class="campo" maxlength="14" placeholder="TU NOMBRE" autocomplete="off" value="${limpiarNombre(leerNombre())}">
+    <div class="elige-el" id="elige-el"></div>
     <div class="opciones" id="modo"></div><div id="detalle" class="detalle"></div>`, [], false, true);
   $('ventana').classList.add('yeso');
   $('nombre').oninput = () => { if (!p.turno) { mesaDeFondo(limpiarNombre($('nombre').value)); pintar(); } };
+  const pintarElementos = () => {
+    $('elige-el').innerHTML = [...EL, null].map((e) => `<div class="op-el ${e === elementoElegido ? 'elegida' : ''}" data-e="${e || ''}">${e
+      ? `<span class="piedra esf-${e}"></span>${NOMBRE_EL[e]}` : '<span class="azar">?</span>Al azar'}</div>`).join('');
+  };
+  $('elige-el').onclick = (e) => { const o = e.target.closest('[data-e]'); if (o) { elementoElegido = o.dataset.e || null; guardarElemento(elementoElegido); pintarElementos(); } };
+  pintarElementos();
   $('modo').onclick = (e) => { const o = e.target.closest('[data-m]'); if (o) { modo = o.dataset.m; pintarModo(); } };
   pintarModo();
 }
@@ -1324,7 +1342,7 @@ async function crearSala(nombre) {
   red = { ...c, codigo, anfitrion: true, version: 0, ref: c.db.doc('partidas/' + codigo) };
   try {
     await red.ref.set({ estado: 'sala', anfitrion: c.uid, version: 0 });
-    await red.ref.collection('sala').doc(c.uid).set({ nombre, uid: c.uid, t: Date.now() });
+    await red.ref.collection('sala').doc(c.uid).set({ nombre, uid: c.uid, t: Date.now(), elemento: elementoElegido });
   } catch (e) { red = null; return avisoRed('No se ha podido crear la partida (' + (e.code || 'error') + '). ' + sinRed); }
   let plazas = 4;
   let gente = [];
@@ -1344,7 +1362,7 @@ async function crearSala(nombre) {
     <div class="nota">Los huecos que nadie ocupe los juegan bots.</div>`,
   [{ texto: 'Salir', accion: inicio }, { texto: 'Empezar', clase: 'verde', accion: () => {
     quitarSala();
-    const lista = Array.from({ length: plazas }, (_, k) => gente[k] ? { nombre: limpiarNombre(gente[k].nombre), bot: false, uid: gente[k].uid }
+    const lista = Array.from({ length: plazas }, (_, k) => gente[k] ? { nombre: limpiarNombre(gente[k].nombre), bot: false, uid: gente[k].uid, elemento: EL.includes(gente[k].elemento) ? gente[k].elemento : null }
       : { nombre: NOMBRES_BOT[k - 1] || 'Bot', bot: true });
     YO = 0;
     escuchar();
@@ -1374,7 +1392,7 @@ async function unirseSala(nombre, codigo) {
   const doc = await ref.get().catch(() => null);
   if (!doc || !doc.exists) return avisoRed('No hay ninguna partida con ese código.');
   if (doc.data().estado !== 'sala') return avisoRed('Esa partida ya ha empezado.');
-  try { await ref.collection('sala').doc(c.uid).set({ nombre, uid: c.uid, t: Date.now() }); } catch (e) { return avisoRed('No te has podido unir (' + (e.code || 'error') + '). ' + sinRed); }
+  try { await ref.collection('sala').doc(c.uid).set({ nombre, uid: c.uid, t: Date.now(), elemento: elementoElegido }); } catch (e) { return avisoRed('No te has podido unir (' + (e.code || 'error') + '). ' + sinRed); }
   red = { ...c, codigo, anfitrion: false, version: -1, ref };
   abrir(`<h2>Partida ${codigo}</h2><div class="texto">Estás dentro. Esperando a que empiece quien la creó…</div>`, [{ texto: 'Salir', accion: inicio }], false, true);
   escuchar();

@@ -83,3 +83,16 @@ test('MANA: el servidor guarda y devuelve documentos y sirve el juego', async ()
     servidor.closeAllConnections();
   }
 });
+
+test('MANA: cada jugador puede elegir su elemento; si dos piden el mismo, se lo queda el primero', () => {
+  const { Partida } = require('../motor');
+  for (let seed = 1; seed < 30; seed++) {
+    const p = new Partida(4, { seed, elegidos: ['agua', null, 'agua', 'fuego'] });
+    const c = p.jug.map((j) => j.color);
+    assert.equal(c[0], 'agua');
+    assert.equal(c[3], 'fuego');
+    assert.equal(new Set(c).size, 4);
+    // su mazo lleva el Elemental menor extra de su elemento
+    assert.equal([...p.jug[0].mazo, ...p.jug[0].mano].filter((x) => x.nombre === 'Rocío').length, 3);
+  }
+});
