@@ -749,7 +749,7 @@ function verCarta(donde, k) {
     if (!c.accion.length && esMiTurno()) {
       guardar(`${c.nombre} como Maná`);
       nuevas = [];
-      p.humanoMana(k);
+      p.humanoMana(k); sonar('mana');
       avisar(`${c.nombre}: +${c.mana} de Maná`, 1800);
       latido();
       pintar();
@@ -763,7 +763,7 @@ function verCarta(donde, k) {
     if (conObjetivos(c)) nota += '<div class="nota">Al jugarla te preguntaré qué eliges en cada efecto.</div>';
     abrir(cabeceraCarta(c, c.coste) + nota, [
       { texto: 'Cancelar' },
-      { texto: `Maná +${c.mana}`, clase: 'lila', inactivo: !esMiTurno(), accion: () => { guardar(`${c.nombre} como Maná`); nuevas = []; p.humanoMana(k); latido(); pintar(); } },
+      { texto: `Maná +${c.mana}`, clase: 'lila', inactivo: !esMiTurno(), accion: () => { guardar(`${c.nombre} como Maná`); nuevas = []; p.humanoMana(k); sonar('mana'); latido(); pintar(); } },
       { texto: 'Acción', clase: 'verde', inactivo: !esMiTurno() || !c.accion.length, accion: () => jugarAccion(k) },
     ]);
     return;
