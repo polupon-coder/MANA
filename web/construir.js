@@ -43,6 +43,13 @@ for (const f of fs.existsSync(dirImg) ? fs.readdirSync(dirImg) : []) {
   if (f.endsWith('.webp')) imagenes[f.slice(0, -5).normalize('NFC')] = `data:image/webp;base64,${fs.readFileSync(path.join(dirImg, f)).toString('base64')}`;
 }
 poner('/*IMAGENES*/{}', JSON.stringify(imagenes));
+// Sonidos: web/sonidos/<nombre>.mp3
+const dirSon = path.join(__dirname, 'sonidos');
+const sonidos = {};
+for (const f of fs.existsSync(dirSon) ? fs.readdirSync(dirSon) : []) {
+  if (f.endsWith('.mp3')) sonidos[f.slice(0, -4)] = `data:audio/mpeg;base64,${fs.readFileSync(path.join(dirSon, f)).toString('base64')}`;
+}
+poner('/*SONIDOS*/{}', JSON.stringify(sonidos));
 poner('/*ACCIONES*/', leer('maqueta/acciones.js'));
 poner('/*MODULOS*/', modulos);
 fs.writeFileSync(path.join(raiz, 'jugar.html'), html);

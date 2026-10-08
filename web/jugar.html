@@ -76,6 +76,13 @@
   .plazas { width: 100%; display: flex; flex-direction: column; gap: 6px; }
   .plaza { border: 1.5px solid var(--linea); border-radius: 12px; padding: 8px 12px 6px; text-align: left; }
   .plaza.bot { color: var(--suave); border-style: dashed; }
+  /* Botón de sonido: pequeño y discreto, junto a Reglas */
+  .acciones-cab { display: inline-flex; align-items: center; gap: 8px; margin-left: -6px; }
+  .acciones-cab .boton-reglas { margin-left: 0 !important; }
+  .boton-audio { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: #8a7a63; opacity: .75; }
+  .boton-audio:hover { opacity: 1; }
+  .boton-audio svg { width: 18px; height: 18px; }
+  .boton-audio.mudo { opacity: .45; }
   .ventana .boton-reglas, .lado .boton-reglas { font-size: 11px; letter-spacing: .08em; padding: 7px 14px 5px; border-radius: 14px; margin-left: -6px; }
   .reglas { text-align: left; font-size: 12px; line-height: 1.5; color: var(--tinta); max-height: 440px; overflow: auto; text-transform: none; padding-right: 6px; }
   .reglas h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--mana); margin: 12px 0 4px; }
@@ -331,7 +338,8 @@
   .movil #era-n { grid-row: 1; grid-column: 1; justify-self: start; font-size: 10px; line-height: 1.35; transform: none; }
   .movil #ronda-n { display: none; }
   .movil .logo img { grid-row: 1; grid-column: 2 / 4; justify-self: center; height: 34px; }
-  .movil .boton-reglas { grid-row: 1; grid-column: 4; justify-self: end; margin: 0; }
+  .movil .acciones-cab { grid-row: 1; grid-column: 4; justify-self: end; margin: 0; gap: 2px; }
+  .movil .boton-audio { width: 24px; height: 24px; }
   .movil .jug { grid-row: 2; justify-self: center; margin: 0; font-size: 12px; gap: 4px; }
   .movil .era { grid-row: 3; grid-column: 1 / -1; margin: 0; text-align: center; }
   .movil .era:empty { display: none; }
@@ -390,7 +398,7 @@
   .movil .mandos { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
   .movil .mandos .boton { padding: 13px 0 11px; }
   /* Mensajes: la guía en una franja encima de los botones; ventanas al ancho de la pantalla */
-  .movil #guia { left: 8px !important; right: 8px; top: 6px !important; bottom: auto; width: auto; font-size: 11.5px; padding: 9px 12px 8px; box-shadow: 0 8px 24px rgba(76, 29, 149, .3); }
+  .movil #guia { left: 8px !important; right: 8px; top: 96px !important; bottom: auto; width: auto; font-size: 11.5px; padding: 9px 12px 8px; box-shadow: 0 8px 24px rgba(76, 29, 149, .3); }
   .movil #guia::after { display: none; }
   .movil #avisos { top: auto; bottom: 168px; width: 92%; flex-direction: column-reverse; }
   .movil .aviso { font-size: 12px; }
@@ -500,6 +508,18 @@ function accion(partes) {
 const esferas = (c, coste) => `<div class="esferas${c.inicial ? ' sin-coste' : ''}">${c.inicial ? '' : `<span class="esf c">${coste}</span>`}<span class="esf m">${c.mana}</span>${accion(partesDe(c))}</div>`;
 // Ilustraciones de los Elementales (las incrusta construir.js desde web/elementales/)
 const IMAGENES = /*IMAGENES*/{};
+// Sonidos (los incrusta construir.js desde web/sonidos/)
+const SONIDOS = /*SONIDOS*/{};
+const audios = {};
+let conSonido = (() => { try { return localStorage.getItem('mana-sonido') !== '0'; } catch (e) { return true; } })();
+function sonar(n) {
+  if (!SONIDOS[n] || !conSonido) return;
+  try {
+    const a = audios[n] || (audios[n] = new Audio(SONIDOS[n]));
+    a.currentTime = 0;
+    a.play().catch(() => { /* el navegador puede bloquearlo: el juego sigue igual */ });
+  } catch (e) { /* sin sonido */ }
+}
 // Los Menores (cartas iniciales) usan al Elemental pequeño de su elemento: hacen lo mismo que él (+1)
 const MENOR = { fuego: 'Ascua', agua: 'Gota', tierra: 'Polvo', aire: 'Brisa' };
 const imagen = (c) => IMAGENES[c.nombre] || (c.inicial && c.el && IMAGENES[MENOR[c.el]]);
@@ -521,8 +541,9 @@ function jugador(j) {
 
 function pintar() {
   const yo = p.jug[YO];
-  $('yo').innerHTML = jugador(yo) + '<span class="boton-reglas" id="ver-reglas">Reglas</span>';
+  $('yo').innerHTML = jugador(yo) + `<span class="acciones-cab"><span class="boton-reglas" id="ver-reglas">Reglas</span><span class="boton-audio ${conSonido ? '' : 'mudo'}" id="audio" title="${conSonido ? 'Silenciar' : 'Activar sonido'}" role="button" aria-label="Sonido"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>${conSonido ? '<path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' : '<path d="m16 9 5 6m0-6-5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'}</svg></span></span>`;
   $('ver-reglas').onclick = verReglas;
+  $('audio').onclick = () => { conSonido = !conSonido; try { localStorage.setItem('mana-sonido', conSonido ? '1' : '0'); } catch (e) { /* sin almacenamiento */ } pintar(); };
   $('rivales').innerHTML = p.jug.filter((j) => j.i !== YO).map(jugador).join('');
   $('rivales').style.justifyContent = p.n === 2 ? 'flex-end' : 'space-between';
   const quien = p.turno && !entreEras ? (p.turno.i === YO ? '<b>Tu turno</b>' : `Turno de <b>${NOMBRES[p.turno.i]}</b>`) : '';
@@ -776,7 +797,7 @@ function verUmbral(u) {
   abrir(cabeceraCarta(c, coste) + saldo, [
     { texto: 'Cancelar' },
     { texto: 'Vincular', clase: 'lleno', inactivo: !p.puedeVincular(u) || !esMiTurno(), accion: () => {
-      guardar(`vincular ${c.nombre}`); nuevas = []; p.humanoVincular(u); avisar(`Vinculas ${c.nombre}: va a tu Reserva.`); latido(); pintar();
+      guardar(`vincular ${c.nombre}`); nuevas = []; p.humanoVincular(u); sonar('vincular'); avisar(`Vinculas ${c.nombre}: va a tu Reserva.`); latido(); pintar();
     } },
   ]);
 }
@@ -1134,7 +1155,7 @@ $('terminar').onclick = () => {
   const aviso = [quedan ? `Te quedan <b>${quedan} ${quedan === 1 ? 'carta' : 'cartas'}</b> en la mano sin usar.` : '',
     sobra > 0 ? `Tienes <b>${sobra} de Maná</b> sin gastar: se perderá.` : ''].filter(Boolean).join(' ');
   abrir(`<h2>¿Terminar el turno?</h2><div class="texto">${aviso || 'Descartas lo jugado y robas 5 cartas nuevas.'}</div>`,
-    [{ texto: 'Seguir jugando' }, { texto: 'Terminar', clase: 'verde', accion: () => { if (esMiTurno()) trasTurno(() => p.humanoTerminar()); } }]);
+    [{ texto: 'Seguir jugando' }, { texto: 'Terminar', clase: 'verde', accion: () => { if (esMiTurno()) { sonar('terminar'); trasTurno(() => p.humanoTerminar()); } } }]);
 };
 
 $('deshacer').onclick = deshacer;
