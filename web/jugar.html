@@ -67,6 +67,18 @@
   html:not(.movil) .ventana.portada .campo { font-size: 17px; padding: 13px 14px 11px; }
   html:not(.movil) .ventana.portada .boton { padding: 14px 0 12px; font-size: 15px; }
   html:not(.movil) .ventana.portada .firma { margin-top: 16px; }
+  /* Portada en el móvil: pantalla completa y todo alineado a los mismos bordes */
+  .movil .velo.portada { background: #faf6f0 url(texturas/fondo.webp) center / cover; }
+  .movil .ventana.portada { width: 100%; height: 100%; max-height: none; max-width: none; border-radius: 0; box-shadow: none; background: none;
+    justify-content: center; gap: 14px; padding: 16px; }
+  .movil .ventana.portada > * { width: 100%; }
+  .movil .ventana.portada .titulo-inicio { width: 100%; margin: 0 0 6px; }
+  .movil .ventana.portada .detalle { gap: 14px; }
+  .movil .ventana.portada .opciones { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 10px; width: 100%; margin: 0; }
+  .movil .ventana.portada .opcion { text-align: center; padding: 12px 4px 10px; }
+  .movil .ventana.portada .unirse, .movil .ventana.portada .boton { width: 100%; }
+  .movil .ventana.portada .boton { padding: 14px 0 12px; }
+  .movil .ventana.portada .firma { margin-top: 6px; text-align: center; }
   .firma { margin-top: 6px; font-size: 11px; letter-spacing: .12em; color: #a08a6c; }
   .titulo-inicio { width: 230px; margin: 4px 0 8px; }
   /* Inicio y sala de partida */
