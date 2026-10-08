@@ -56,7 +56,7 @@
   /* Portada en ordenador: pantalla completa sobre el yeso, título grande y más aire */
   html:not(.movil) .velo.portada { background: #faf6f0 url(texturas/fondo.webp) center / cover; }
   html:not(.movil) .ventana.portada { width: 100%; height: 100%; max-height: none; border-radius: 0; box-shadow: none; background: none;
-    justify-content: center; gap: 18px; padding: 30px 0; }
+    justify-content: safe center; overflow: auto; gap: 18px; padding: 30px 0; }
   html:not(.movil) .ventana.portada > * { width: 520px; }
   html:not(.movil) .ventana.portada .titulo-inicio { width: 520px; margin: 0 0 18px; }
   html:not(.movil) .ventana.portada .detalle { gap: 18px; }
@@ -75,7 +75,7 @@
   /* Portada en el móvil: pantalla completa y todo alineado a los mismos bordes */
   .movil .velo.portada { background: #faf6f0 url(texturas/fondo.webp) center / cover; }
   .movil .ventana.portada { width: 100%; height: 100%; max-height: none; max-width: none; border-radius: 0; box-shadow: none; background: none;
-    justify-content: center; gap: 14px; padding: 16px; }
+    justify-content: safe center; overflow: auto; gap: 14px; padding: 16px; }
   .movil .ventana.portada > * { width: 100%; }
   .movil .ventana.portada .titulo-inicio { width: 100%; margin: 0 0 6px; }
   .movil .ventana.portada .detalle { gap: 14px; }
@@ -84,6 +84,9 @@
   .movil .ventana.portada .unirse, .movil .ventana.portada .boton { width: 100%; }
   .movil .ventana.portada .boton { padding: 14px 0 12px; }
   .movil .ventana.portada .firma { margin-top: 6px; text-align: center; }
+  .nombres-mesa { display: grid; gap: 8px; width: 100%; }
+  .ventana.telon h2 { font-size: 22px; }
+  .ventana.telon .botones { width: 100%; }
   .firma { margin-top: 6px; font-size: 11px; letter-spacing: .12em; color: #a08a6c; }
   .titulo-inicio { width: 230px; margin: 4px 0 8px; }
   /* Inicio y sala de partida */
@@ -1162,7 +1165,9 @@ const muevoBot = (i) => asientos[i].bot && (!red || red.anfitrion);
 function continuar() {
   pintar();
   if (p.fin) return finPartida();
-  if (entreEras || p.turno.i === YO || !muevoBot(p.turno.i)) return;
+  if (entreEras) return;
+  if (enMesa && p.turno.i !== YO && asientos[p.turno.i].local) return telon(p.turno.i);
+  if (p.turno.i === YO || !muevoBot(p.turno.i)) return;
   ocupado = true;
   pintar();
   const i = p.turno.i;
@@ -1242,7 +1247,7 @@ function finEra() {
 
 function finPartida() {
   const gana = p.ganadores.map((k) => NOMBRES[k]);
-  const titulo = p.ganadores.length > 1 ? `Victoria compartida: ${gana.join(' y ')}` : p.ganadores[0] === YO ? '¡Has ganado!' : `Gana ${gana[0]}`;
+  const titulo = p.ganadores.length > 1 ? `Victoria compartida: ${gana.join(' y ')}` : p.ganadores[0] === YO && !enMesa ? '¡Has ganado!' : `Gana ${gana[0]}`;
   abrir(`<h2>${titulo}</h2>${tablaPuntuacion()}<div class="texto">Sellos finales: ${clasificacion()}</div>`,
     [{ texto: 'Ver registro', accion: verRegistro }, { texto: 'Copiar registro', cierra: false, accion: copiarRegistro }, { texto: 'Otra partida', clase: 'verde', accion: inicio }], true, true);
 }
@@ -1314,7 +1319,40 @@ let elementoElegido = (() => { try { const e = localStorage.getItem('mana-elemen
 const guardarElemento = (e) => { try { if (e) localStorage.setItem('mana-elemento', e); else localStorage.removeItem('mana-elemento'); } catch (x) { /* sin almacenamiento */ } };
 const nombreElegido = () => { const n = limpiarNombre($('nombre').value) || 'Tú'; guardarNombre(n); return n; };
 
+// ---------- Partida en esta pantalla (varias personas se pasan el dispositivo) ----------------------
+let nMesa = 2;
+let nombresMesa = ['Jugador 2', 'Jugador 3', 'Jugador 4'];
+const opcionesMesa = () => [2, 3, 4].map((k) => `<div class="opcion ${k === nMesa ? 'elegida' : ''}" data-n="${k}">${k} jugadores</div>`).join('');
+const camposMesa = () => Array.from({ length: nMesa - 1 }, (_, k) =>
+  `<input class="campo mesa-nombre" maxlength="14" placeholder="JUGADOR ${k + 2}" autocomplete="off" value="${limpiarNombre(nombresMesa[k] || '')}">`).join('');
+function guardarNombresMesa() {
+  document.querySelectorAll('.mesa-nombre').forEach((c, k) => { nombresMesa[k] = limpiarNombre(c.value) || `Jugador ${k + 2}`; });
+}
+let enMesa = false; // partida en esta pantalla: hay varias personas y YO cambia en cada turno suyo
+
+function partidaEnMesa(nombre, elemento) {
+  red = null;
+  YO = 0;
+  enMesa = true;
+  const lista = [{ nombre: nombre || 'Jugador 1', bot: false, local: true, elemento }];
+  for (let k = 0; k < nMesa - 1; k++) lista.push({ nombre: nombresMesa[k] || `Jugador ${k + 2}`, bot: false, local: true });
+  empezarPartida(lista, Math.floor(Math.random() * 1e9));
+}
+
+// Telón entre turnos: tapa la mesa hasta que la siguiente persona dice que ya tiene el dispositivo
+function telon(i) {
+  YO = i;
+  pasos = [];
+  nuevas = [];
+  abrir(`<span class="piedra esf-${p.jug[i].color}" style="width:72px;height:72px"></span>
+    <h2>Turno de ${NOMBRES[i]}</h2><div class="texto">Pásale el dispositivo a <b>${NOMBRES[i]}</b>. Los demás, sin mirar.</div>`,
+  [{ texto: `Soy ${NOMBRES[i]}`, clase: 'verde', accion: () => { pintar(); } }], false, true);
+  $('ventana').classList.add('yeso', 'portada', 'telon');
+  $('velo').classList.add('portada');
+}
+
 function inicio() {
+  enMesa = false;
   if (red && red.quitar) red.quitar();
   red = null;
   let n = 4;
@@ -1322,13 +1360,20 @@ function inicio() {
   let modo = salaEnlace ? 'amigos' : 'bots';
   const opcionesBots = () => [2, 3, 4].map((k) => `<div class="opcion ${k === n ? 'elegida' : ''}" data-n="${k}">${k - 1} ${k === 2 ? 'bot' : 'bots'}</div>`).join('');
   const pintarModo = () => {
-    $('modo').innerHTML = ['bots', 'amigos'].map((m) => `<div class="opcion ${m === modo ? 'elegida' : ''}" data-m="${m}">${m === 'bots' ? 'Contra bots' : 'Con amigos'}</div>`).join('');
+    $('modo').innerHTML = ['bots', 'mesa', 'amigos'].map((m) => `<div class="opcion ${m === modo ? 'elegida' : ''}" data-m="${m}">${{ bots: 'Contra bots', mesa: 'En esta pantalla', amigos: 'Por internet' }[m]}</div>`).join('');
     $('detalle').innerHTML = modo === 'bots'
       ? `<div class="opciones" id="opciones">${opcionesBots()}</div><div class="opciones" id="nivel">${opcionesNivel()}</div><div class="boton verde ancho" id="empezar-bots">Empezar</div>`
+      : modo === 'mesa'
+      ? `<div class="opciones" id="n-mesa">${opcionesMesa()}</div><div class="nombres-mesa" id="nombres-mesa">${camposMesa()}</div>
+         <div class="nota">Os pasáis el dispositivo: antes de cada turno se tapa la mesa para que nadie vea la mano del otro.</div>
+         <div class="boton verde ancho" id="empezar-mesa">Empezar</div>`
       : `<div class="boton verde ancho" id="crear">Crear partida</div>
          <div class="unirse"><input id="codigo" maxlength="4" placeholder="CÓDIGO" autocomplete="off"><div class="boton lleno" id="unirme">Unirme</div></div>
          <div class="nota" id="aviso-red"></div>`;
-    if (modo === 'bots') {
+    if (modo === 'mesa') {
+      $('n-mesa').onclick = (e) => { const o = e.target.closest('[data-n]'); if (!o) return; guardarNombresMesa(); nMesa = Number(o.dataset.n); $('n-mesa').innerHTML = opcionesMesa(); $('nombres-mesa').innerHTML = camposMesa(); };
+      $('empezar-mesa').onclick = () => { guardarNombresMesa(); cerrar(); partidaEnMesa(nombreElegido(), elementoElegido); };
+    } else if (modo === 'bots') {
       $('opciones').onclick = (e) => { const o = e.target.closest('[data-n]'); if (o) { n = Number(o.dataset.n); $('opciones').innerHTML = opcionesBots(); } };
       activarNivel('nivel');
       $('empezar-bots').onclick = () => { cerrar(); nuevaPartida(n, nombreElegido(), elementoElegido); };
