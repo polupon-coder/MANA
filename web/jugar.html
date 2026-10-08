@@ -398,8 +398,11 @@
   .movil .mandos { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
   .movil .mandos .boton { padding: 13px 0 11px; }
   /* Mensajes: la guía en una franja encima de los botones; ventanas al ancho de la pantalla */
-  .movil #guia { left: 8px !important; right: 8px; top: 96px !important; bottom: auto; width: auto; font-size: 11.5px; padding: 9px 12px 8px; box-shadow: 0 8px 24px rgba(76, 29, 149, .3); }
+  .movil #guia { left: 8px !important; right: 8px; top: auto !important; bottom: 66px; width: auto; font-size: 11.5px; padding: 9px 12px 8px; box-shadow: 0 8px 24px rgba(76, 29, 149, .3); }
   .movil #guia::after { display: none; }
+  /* El mensaje no bloquea lo que hay debajo: se puede tocar a través; solo su enlace responde */
+  .movil #guia { pointer-events: none; }
+  .movil #guia .apagar { pointer-events: auto; }
   .movil #avisos { top: auto; bottom: 168px; width: 92%; flex-direction: column-reverse; }
   .movil .aviso { font-size: 12px; }
   .movil .ventana, .movil .ventana.ancha { width: calc(100% - 24px); max-width: 420px; padding: 20px 16px 16px; }
@@ -919,6 +922,7 @@ async function jugarAccion(k) {
   nuevas = [];
   eligiendo = true;
   const c = p.empezarAccion(YO, k);
+  if (c.el) sonar(c.el); // sonido de la Acción según su elemento (si existe: web/sonidos/<elemento>.mp3)
   pintar();
   for (let n = 0; n < c.accion.length; n++) {
     const e = c.accion[n];
