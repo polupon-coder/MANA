@@ -53,6 +53,20 @@
   .ventana { background: #fbf6ef url(texturas/fondo.webp) center / cover; }
   .ventana.yeso { background: linear-gradient(rgba(255, 252, 247, .3), rgba(255, 252, 247, .3)), url(texturas/fondo.webp) center / cover; }
   .ventana.yeso .campo { background: rgba(255, 255, 255, .6); }
+  /* Portada en ordenador: pantalla completa sobre el yeso, título grande y más aire */
+  html:not(.movil) .velo.portada { background: #faf6f0 url(texturas/fondo.webp) center / cover; }
+  html:not(.movil) .ventana.portada { width: 100%; height: 100%; max-height: none; border-radius: 0; box-shadow: none; background: none;
+    justify-content: center; gap: 18px; padding: 30px 0; }
+  html:not(.movil) .ventana.portada > * { width: 440px; }
+  html:not(.movil) .ventana.portada .titulo-inicio { width: 520px; margin: 0 0 18px; }
+  html:not(.movil) .ventana.portada .opciones, html:not(.movil) .ventana.portada .detalle { gap: 14px; justify-content: center; }
+  html:not(.movil) .ventana.portada .detalle { gap: 18px; }
+  html:not(.movil) .ventana.portada .opcion { padding: 12px 22px 10px; font-size: 15px; }
+  html:not(.movil) .ventana.portada .op-el { padding: 10px 2px 8px; font-size: 11px; }
+  html:not(.movil) .ventana.portada .op-el .piedra, html:not(.movil) .ventana.portada .op-el .azar { width: 38px; height: 38px; }
+  html:not(.movil) .ventana.portada .campo { font-size: 17px; padding: 13px 14px 11px; }
+  html:not(.movil) .ventana.portada .boton { padding: 14px 0 12px; font-size: 15px; }
+  html:not(.movil) .ventana.portada .firma { margin-top: 16px; }
   .firma { margin-top: 6px; font-size: 11px; letter-spacing: .12em; color: #a08a6c; }
   .titulo-inicio { width: 230px; margin: 4px 0 8px; }
   /* Inicio y sala de partida */
@@ -66,7 +80,7 @@
   .enlace { display: grid; grid-template-columns: 1fr 100px; gap: 8px; width: 100%; }
   .enlace input { width: 100%; border: 1.5px solid var(--linea); border-radius: 12px; padding: 9px 10px 7px; font: inherit; font-size: 11px; text-transform: none; background: rgba(255,255,255,.7); color: var(--tinta); }
   /* Elegir elemento al empezar */
-  .elige-el { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; }
+  .elige-el { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; }
   .op-el { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 2px 6px; border-radius: 14px; cursor: pointer; font-size: 10px; font-weight: 700; color: #6b5a43;
     background: #efe6da url(texturas/fondo.webp) center / cover; background-blend-mode: multiply;
     box-shadow: inset 2px 3px 6px rgba(60, 35, 10, .22), inset -2px -2px 5px rgba(255, 255, 255, .6); }
@@ -720,6 +734,7 @@ function abrir(html, botones = [], ancha = false, fija = false) {
   const v = $('ventana');
   if (fija) $('velo').dataset.fija = '1'; else delete $('velo').dataset.fija;
   v.className = 'ventana' + (ancha ? ' ancha' : '');
+  $('velo').classList.remove('portada');
   v.innerHTML = html + (botones.length ? `<div class="botones">${botones.map((b, k) =>
     `<div class="boton ${b.clase || 'borde'} ${b.inactivo ? 'inactivo' : ''}" data-b="${k}">${b.texto}</div>`).join('')}</div>` : '');
   v.onclick = (e) => {
@@ -733,7 +748,7 @@ function abrir(html, botones = [], ancha = false, fija = false) {
   $('velo').classList.add('abierta');
   guia();
 }
-function cerrar() { $('velo').classList.remove('abierta'); guia(); }
+function cerrar() { $('velo').classList.remove('abierta', 'portada'); guia(); }
 $('velo').addEventListener('click', (e) => { if (e.target === $('velo') && !$('velo').dataset.fija) cerrar(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('velo').dataset.fija) cerrar(); });
 
@@ -1274,7 +1289,7 @@ function activarNivel(id) {
   };
 }
 // Elemento elegido al empezar (null: al azar); se recuerda para la próxima vez
-let elementoElegido = (() => { try { const e = localStorage.getItem('mana-elemento'); return EL.includes(e) ? e : null; } catch (x) { return null; } })();
+let elementoElegido = (() => { try { const e = localStorage.getItem('mana-elemento'); if (EL.includes(e)) return e; } catch (x) { /* sin almacenamiento */ } return EL[Math.floor(Math.random() * 4)]; })();
 const guardarElemento = (e) => { try { if (e) localStorage.setItem('mana-elemento', e); else localStorage.removeItem('mana-elemento'); } catch (x) { /* sin almacenamiento */ } };
 const nombreElegido = () => { const n = limpiarNombre($('nombre').value) || 'Tú'; guardarNombre(n); return n; };
 
@@ -1307,13 +1322,13 @@ function inicio() {
     <div class="elige-el" id="elige-el"></div>
     <div class="opciones" id="modo"></div><div id="detalle" class="detalle"></div>
     <div class="firma">Un juego de Pol Lupon</div>`, [], false, true);
-  $('ventana').classList.add('yeso');
+  $('ventana').classList.add('yeso', 'portada');
+  $('velo').classList.add('portada');
   $('nombre').oninput = () => { if (!p.turno) { mesaDeFondo(limpiarNombre($('nombre').value)); pintar(); } };
   const pintarElementos = () => {
-    $('elige-el').innerHTML = [...EL, null].map((e) => `<div class="op-el ${e === elementoElegido ? 'elegida' : ''}" data-e="${e || ''}">${e
-      ? `<span class="piedra esf-${e}"></span>${NOMBRE_EL[e]}` : '<span class="azar">?</span>Al azar'}</div>`).join('');
+    $('elige-el').innerHTML = EL.map((e) => `<div class="op-el ${e === elementoElegido ? 'elegida' : ''}" data-e="${e}"><span class="piedra esf-${e}"></span>${NOMBRE_EL[e]}</div>`).join('');
   };
-  $('elige-el').onclick = (e) => { const o = e.target.closest('[data-e]'); if (o) { elementoElegido = o.dataset.e || null; guardarElemento(elementoElegido); pintarElementos(); } };
+  $('elige-el').onclick = (e) => { const o = e.target.closest('[data-e]'); if (o) { elementoElegido = o.dataset.e; guardarElemento(elementoElegido); pintarElementos(); } };
   pintarElementos();
   $('modo').onclick = (e) => { const o = e.target.closest('[data-m]'); if (o) { modo = o.dataset.m; pintarModo(); } };
   pintarModo();
