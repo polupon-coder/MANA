@@ -497,12 +497,18 @@ class Partida {
 
 
   // Valor de vincular lo mejor posible con 'mana' (para el bot).
+  // Bots de nivel aprendiz: opciones.aprendiz es true (todos los bots) o una lista por asiento
+  esAprendiz(i) {
+    const a = this.v.aprendiz;
+    return Array.isArray(a) ? !!a[i] : !!a;
+  }
+
   compra(i, mana) {
     const turnosMios = Math.max(0, Math.ceil(this.turnosPartida / this.n) - 1);
     const coef = 0.07 * turnosMios;
     const j = this.jug[i];
     // Liberar: el bot le da un valor proporcional a los turnos que le quedan.
-    const k = Array.isArray(this.v.botLiberar) ? this.v.botLiberar[i] : this.v.botLiberar;
+    const k = this.esAprendiz(i) ? 0.01 : Array.isArray(this.v.botLiberar) ? this.v.botLiberar[i] : this.v.botLiberar;
     const puedeLiberar = this.v.liberar && (j.jugadas.some((c) => c.inicial) || j.mano.some((c) => c.inicial));
     const valLib = k * turnosMios;
     let best = { idx: -1, val: 0, liberar: false };
@@ -538,8 +544,14 @@ class Partida {
     if (this.v.proteccion === 'turno') for (const s of ELEMENTOS) this.pres[s][i].prot = 0;
     const manaDe = (cs) => cs.reduce((a, c) => a + c.mana, 0);
     let usadas = 0;
+    // Nivel aprendiz: mira menos jugadas por delante y a veces se equivoca (juega otra carta o se para)
+    const aprendiz = this.esAprendiz(i);
     while (usadas < this.v.acciones) {
-      const { k } = this.plan(i, this.v.acciones - usadas, 2);
+      let { k } = this.plan(i, this.v.acciones - usadas, aprendiz ? 1 : 2);
+      if (aprendiz && this.rng() < 0.3) {
+        const conAccion = j.mano.map((c, x) => (c.accion.length ? x : -1)).filter((x) => x >= 0);
+        k = conAccion.length && this.rng() < 0.7 ? conAccion[Math.floor(this.rng() * conAccion.length)] : -1;
+      }
       if (k < 0) break;
       this.jugarAccion(i, k);
       usadas++;

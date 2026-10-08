@@ -1109,12 +1109,18 @@ class Partida {
 
 
   // Valor de vincular lo mejor posible con 'mana' (para el bot).
+  // Bots de nivel aprendiz: opciones.aprendiz es true (todos los bots) o una lista por asiento
+  esAprendiz(i) {
+    const a = this.v.aprendiz;
+    return Array.isArray(a) ? !!a[i] : !!a;
+  }
+
   compra(i, mana) {
     const turnosMios = Math.max(0, Math.ceil(this.turnosPartida / this.n) - 1);
     const coef = 0.07 * turnosMios;
     const j = this.jug[i];
     // Liberar: el bot le da un valor proporcional a los turnos que le quedan.
-    const k = Array.isArray(this.v.botLiberar) ? this.v.botLiberar[i] : this.v.botLiberar;
+    const k = this.esAprendiz(i) ? 0.01 : Array.isArray(this.v.botLiberar) ? this.v.botLiberar[i] : this.v.botLiberar;
     const puedeLiberar = this.v.liberar && (j.jugadas.some((c) => c.inicial) || j.mano.some((c) => c.inicial));
     const valLib = k * turnosMios;
     let best = { idx: -1, val: 0, liberar: false };
@@ -1150,8 +1156,14 @@ class Partida {
     if (this.v.proteccion === 'turno') for (const s of ELEMENTOS) this.pres[s][i].prot = 0;
     const manaDe = (cs) => cs.reduce((a, c) => a + c.mana, 0);
     let usadas = 0;
+    // Nivel aprendiz: mira menos jugadas por delante y a veces se equivoca (juega otra carta o se para)
+    const aprendiz = this.esAprendiz(i);
     while (usadas < this.v.acciones) {
-      const { k } = this.plan(i, this.v.acciones - usadas, 2);
+      let { k } = this.plan(i, this.v.acciones - usadas, aprendiz ? 1 : 2);
+      if (aprendiz && this.rng() < 0.3) {
+        const conAccion = j.mano.map((c, x) => (c.accion.length ? x : -1)).filter((x) => x >= 0);
+        k = conAccion.length && this.rng() < 0.7 ? conAccion[Math.floor(this.rng() * conAccion.length)] : -1;
+      }
       if (k < 0) break;
       this.jugarAccion(i, k);
       usadas++;
@@ -2077,7 +2089,7 @@ const NOMBRES_BOT = ['Ana', 'Pol', 'Marc', 'Lía'];
 function empezarPartida(lista, semilla) {
   asientos = lista;
   NOMBRES = lista.map((a) => a.nombre);
-  p = new Partida(lista.length, { seed: semilla, registro: true, elegidos: lista.map((a) => a.elemento) }).iniciar();
+  p = new Partida(lista.length, { seed: semilla, registro: true, elegidos: lista.map((a) => a.elemento), aprendiz: nivelBots === 'aprendiz' }).iniciar();
   vistos.clear();
   ocupado = false;
   entreEras = false;
@@ -2250,6 +2262,18 @@ const PIEZA = { fuego: ['fuego', 'agua'], agua: ['agua', 'tierra'], tierra: ['ti
 const leerNombre = () => { try { return localStorage.getItem('mana-nombre') || ''; } catch (e) { return ''; } };
 const guardarNombre = (n) => { try { localStorage.setItem('mana-nombre', n); } catch (e) { /* sin almacenamiento */ } };
 const limpiarNombre = (n) => n.replace(/[<>&"]/g, '').trim().slice(0, 14);
+// Nivel de los bots: 'aprendiz' (liberan poco y se equivocan a veces) o 'normal'; se recuerda
+let nivelBots = (() => { try { return localStorage.getItem('mana-nivel') === 'normal' ? 'normal' : 'aprendiz'; } catch (x) { return 'aprendiz'; } })();
+const opcionesNivel = () => ['aprendiz', 'normal'].map((v) => `<div class="opcion ${v === nivelBots ? 'elegida' : ''}" data-v="${v}">${v === 'aprendiz' ? 'Bots aprendiz' : 'Bots normales'}</div>`).join('');
+function activarNivel(id) {
+  $(id).onclick = (e) => {
+    const o = e.target.closest('[data-v]');
+    if (!o) return;
+    nivelBots = o.dataset.v;
+    try { localStorage.setItem('mana-nivel', nivelBots); } catch (x) { /* sin almacenamiento */ }
+    $(id).innerHTML = opcionesNivel();
+  };
+}
 // Elemento elegido al empezar (null: al azar); se recuerda para la próxima vez
 let elementoElegido = (() => { try { const e = localStorage.getItem('mana-elemento'); return EL.includes(e) ? e : null; } catch (x) { return null; } })();
 const guardarElemento = (e) => { try { if (e) localStorage.setItem('mana-elemento', e); else localStorage.removeItem('mana-elemento'); } catch (x) { /* sin almacenamiento */ } };
@@ -2265,12 +2289,13 @@ function inicio() {
   const pintarModo = () => {
     $('modo').innerHTML = ['bots', 'amigos'].map((m) => `<div class="opcion ${m === modo ? 'elegida' : ''}" data-m="${m}">${m === 'bots' ? 'Contra bots' : 'Con amigos'}</div>`).join('');
     $('detalle').innerHTML = modo === 'bots'
-      ? `<div class="opciones" id="opciones">${opcionesBots()}</div><div class="boton verde ancho" id="empezar-bots">Empezar</div>`
+      ? `<div class="opciones" id="opciones">${opcionesBots()}</div><div class="opciones" id="nivel">${opcionesNivel()}</div><div class="boton verde ancho" id="empezar-bots">Empezar</div>`
       : `<div class="boton verde ancho" id="crear">Crear partida</div>
          <div class="unirse"><input id="codigo" maxlength="4" placeholder="CÓDIGO" autocomplete="off"><div class="boton lleno" id="unirme">Unirme</div></div>
          <div class="nota" id="aviso-red"></div>`;
     if (modo === 'bots') {
       $('opciones').onclick = (e) => { const o = e.target.closest('[data-n]'); if (o) { n = Number(o.dataset.n); $('opciones').innerHTML = opcionesBots(); } };
+      activarNivel('nivel');
       $('empezar-bots').onclick = () => { cerrar(); nuevaPartida(n, nombreElegido(), elementoElegido); };
     } else {
       $('crear').onclick = () => crearSala(nombreElegido());
@@ -2374,7 +2399,7 @@ async function crearSala(nombre) {
     : '<div class="texto">Pasa a tus amigos el <b>enlace de esta página</b> y este código. Lo escriben en «Con amigos» y pulsan «Unirme».</div>'}
     <div class="codigo-grande">${codigo}</div>
     <div class="opciones" id="total-plazas"></div><div class="plazas" id="plazas"></div>
-    <div class="nota">Los huecos que nadie ocupe los juegan bots.</div>`,
+    <div class="nota">Los huecos que nadie ocupe los juegan bots.</div><div class="opciones" id="nivel-sala">${opcionesNivel()}</div>`,
   [{ texto: 'Salir', accion: inicio }, { texto: 'Empezar', clase: 'verde', accion: () => {
     quitarSala();
     const lista = Array.from({ length: plazas }, (_, k) => gente[k] ? { nombre: limpiarNombre(gente[k].nombre), bot: false, uid: gente[k].uid, elemento: EL.includes(gente[k].elemento) ? gente[k].elemento : null }
@@ -2387,6 +2412,7 @@ async function crearSala(nombre) {
     try { await navigator.clipboard.writeText($('enlace').value); avisar('Enlace copiado'); }
     catch (e) { $('enlace').select(); avisar('Selecciona el enlace y cópialo'); }
   };
+  activarNivel('nivel-sala');
   $('total-plazas').onclick = (e) => { const o = e.target.closest('[data-n]'); if (o) { plazas = Math.max(Number(o.dataset.n), Math.min(gente.length, 4)); pintarSala(); } };
   const quitarSala = red.ref.collection('sala').orderBy('t').onSnapshot((snap) => {
     gente = snap.docs.map((d) => d.data()).slice(0, 4);
