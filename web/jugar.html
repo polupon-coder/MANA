@@ -92,6 +92,8 @@
   #splash[hidden] { display: none; }
   #splash .lienzo { position: absolute; }
   #splash .lienzo img { width: 100%; height: 100%; display: block; }
+  #splash .lienzo img[hidden] { display: none; }
+  #splash .firma-splash { text-shadow: 0 1px 3px rgba(255, 250, 240, .9); }
   /* En el móvil la imagen se funde con el yeso por arriba y por abajo */
   #splash .lienzo.fundido img { -webkit-mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); }
   #splash .jugar { position: absolute; left: 49.25%; top: 74.6%; width: 14%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%;
@@ -504,7 +506,7 @@
   <div class="columna"><div class="titulo img"><img src="url(texturas/titulo-santuarios.webp)" alt="Santuarios"></div><div class="panel col-der"><div id="santuarios"></div></div></div>
 </div>
 
-<div id="splash" role="dialog" aria-label="Mana"><div class="lienzo" id="lienzo"><img src="url(texturas/portada.webp)" alt="Mana: los cuatro Elementales alrededor de una esfera de Maná"><div class="jugar" id="jugar" role="button" tabindex="0">Jugar</div></div><div class="firma-splash">Un juego de Pol Lupon</div></div>
+<div id="splash" role="dialog" aria-label="Mana"><div class="lienzo" id="lienzo"><img id="img-portada" src="url(texturas/portada.webp)" alt="Mana: los cuatro Elementales alrededor de una esfera de Maná"><img id="img-portada-movil" src="url(texturas/portada-movil.webp)" alt="Mana: los cuatro Elementales alrededor de una esfera de Maná"><div class="jugar" id="jugar" role="button" tabindex="0">Jugar</div></div><div class="firma-splash">Un juego de Pol Lupon</div></div>
 <div class="velo" id="velo"><div class="ventana" id="ventana"></div></div>
 <div id="avisos"></div>
 <div id="guia" hidden></div>
@@ -550,12 +552,17 @@ function colocarPortada() {
   sp.style.width = W + 'px'; sp.style.height = H + 'px';
   const movil = document.documentElement.classList.contains('movil');
   // en el móvil se recortan los lados para que el título quepa entero y la imagen se vea más grande
-  const k = movil ? (W * 1.6) / 1672 : Math.max(W / 1672, H / 941);
-  const w = 1672 * k, h = 941 * k;
+  // móvil: portada vertical propia (941×1672); ordenador: la apaisada (1672×941). Ambas llenan la pantalla
+  const [iw, ih] = movil ? [941, 1672] : [1672, 941];
+  const k = Math.max(W / iw, H / ih);
+  const w = iw * k, h = ih * k;
+  $('img-portada').hidden = movil; $('img-portada-movil').hidden = !movil;
+  // posición de la esfera de Maná en cada imagen
+  Object.assign($('jugar').style, movil ? { left: '52.5%', top: '68.7%', width: '24%' } : { left: '49.25%', top: '74.6%', width: '14%' });
   const l = $('lienzo');
-  Object.assign(l.style, { width: w + 'px', height: h + 'px', left: (W - w) / 2 + 'px', top: (H - h) / 2 + 'px', fontSize: Math.max(15, w * (movil ? 0.014 : 0.02)) + 'px' });
+  Object.assign(l.style, { width: w + 'px', height: h + 'px', left: (W - w) / 2 + 'px', top: (H - h) / 2 + 'px', fontSize: Math.max(15, w * (movil ? 0.04 : 0.02)) + 'px' });
   $('splash').querySelector('.firma-splash').style.fontSize = Math.max(11, Math.min(W, H) * 0.016) + 'px';
-  l.classList.toggle('fundido', movil);
+
 }
 if (location.search.includes('rapido')) $('splash').hidden = true; // ?rapido (pruebas): sin portada
 window.addEventListener('resize', colocarPortada);
