@@ -16,6 +16,8 @@ El repositorio incluye `render.yaml`, así que Render lo configura solo:
 
 Cada vez que se suben cambios a `main`, Render vuelve a publicar el juego solo.
 
+Versión en inglés: la misma dirección acabada en `/en` (o el enlace **ES · EN** de la portada).
+
 Para jugar: pon tu nombre, **Con amigos → Crear partida**, pulsa **Copiar** y pasa el enlace. Tus
 amigos lo abren, ponen su nombre y pulsan **Unirme**. Los huecos libres los juegan bots.
 
@@ -28,7 +30,8 @@ amigos lo abren, ponen su nombre y pulsan **Unirme**. Los huecos libres los jueg
 | Archivo | Qué es |
 | --- | --- |
 | `cartas.js`, `motor.js` | Cartas y motor de reglas, con los bots. |
-| `web/jugar.html` | La mesa (plantilla); `web/construir.js` la empaqueta con todo dentro en `jugar.html`. |
+| `web/jugar.html` | La mesa (plantilla); `web/construir.js` la empaqueta con todo dentro en `jugar.html` y, en inglés, `jugar-en.html`. |
+| `web/en.js` | Traducción al inglés (frases y nombres de cartas). Si cambias un texto de la mesa, cámbialo también aquí: la construcción avisa si falta. |
 | `web/elementales/`, `web/texturas/` | Ilustraciones, texturas y letra. |
 | `servidor/servidor.js` | Servidor sin dependencias: sirve `jugar.html` y reparte la partida entre jugadores. |
 | `simular.js`, `valor_cartas.js`, `afinidad.js`, `duracion.js` | Simulaciones para equilibrar el juego ([EVALUACION.md](EVALUACION.md)). |
@@ -38,6 +41,6 @@ amigos lo abren, ponen su nombre y pulsan **Unirme**. Los huecos libres los jueg
 
 ```
 npm test             # pruebas
-npm run construir    # vuelve a generar jugar.html tras tocar web/jugar.html, cartas o motor
+npm run construir    # vuelve a generar jugar.html y jugar-en.html tras tocar web/jugar.html, cartas o motor
 npm start            # servidor en http://localhost:3000
 ```

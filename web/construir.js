@@ -1,15 +1,49 @@
 'use strict';
 // Empaqueta el juego en un solo archivo: mana/jugar.html (motor, cartas y explicaciones incluidos).
-// Uso: node mana/web/construir.js
+// También genera la versión en inglés (jugar-en.html) con las traducciones de web/en.js.
+// Uso: node web/construir.js [destino-para-publicar]
 const fs = require('node:fs');
 const path = require('node:path');
 
 const raiz = path.join(__dirname, '..');
-const leer = (f) => fs.readFileSync(path.join(raiz, f), 'utf8');
+const leerEs = (f) => fs.readFileSync(path.join(raiz, f), 'utf8');
+const EN = require('./en');
 
-// Mini-sistema de módulos para usar en el navegador los mismos archivos que usa Node
-const modulo = (nombre, archivo) => `__def('${nombre}', function (module, exports) {\n${leer(archivo)}\n});`;
-const modulos = `
+// Traducción: frases exactas (deben aparecer todas) y nombres de cartas entre comillas o como clave
+function sustituir(texto, pares, archivo) {
+  // en orden: cada frase se busca en el texto ya traducido por las anteriores
+  const faltan = [];
+  for (const [es, en] of pares) {
+    if (!texto.includes(es)) faltan.push(es);
+    else texto = texto.split(es).join(en);
+  }
+  if (faltan.length) throw new Error(`en.js: no aparece en ${archivo}:\n  ${faltan.join('\n  ')}`);
+  return texto;
+}
+const escapar = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function traducirNombres(texto) {
+  for (const [es, en] of Object.entries(EN.nombres)) {
+    if (es === en) continue;
+    texto = texto.replace(new RegExp(`(['"])${escapar(es)}\\1`, 'g'), (_, q) => q + en + q);
+    texto = texto.replace(new RegExp(`(^|[\\s{,])${escapar(es)}:`, 'gm'), (_, a) => `${a}${en}:`);
+  }
+  return texto;
+}
+let idioma = 'es';
+const leer = (f) => {
+  let t = leerEs(f);
+  if (idioma === 'en') {
+    if (f === 'maqueta/acciones.js') t = sustituir(t, EN.acciones, f);
+    if (f === 'web/jugar.html') t = sustituir(t, EN.frases, f);
+    t = traducirNombres(t);
+  }
+  return t;
+};
+
+function construir() {
+  // Mini-sistema de módulos para usar en el navegador los mismos archivos que usa Node
+  const modulo = (nombre, archivo) => `__def('${nombre}', function (module, exports) {\n${leer(archivo)}\n});`;
+  const modulos = `
 const __mods = {};
 function __def(n, f) { __mods[n] = { f, e: null }; }
 function require(n) {
@@ -22,37 +56,46 @@ ${modulo('cartas', 'cartas.js')}
 ${modulo('motor', 'motor.js')}
 `;
 
-let html = leer('web/jugar.html');
-const poner = (marca, codigo) => {
-  if (!html.includes(marca)) throw new Error(`Falta ${marca} en jugar.html`);
-  if (codigo.includes('</script')) throw new Error('El código no puede contener </script>');
-  html = html.replace(marca, () => codigo);
-};
-// Texturas: se incrustan en el archivo para que funcione sin carpetas al lado
-// En <img src="url(texturas/x.webp)"> se deja solo el data URI
-html = html.replace(/src="url\(texturas\/([a-z-]+)\.webp\)"/g, (_, n) =>
-  `src="data:image/webp;base64,${fs.readFileSync(path.join(__dirname, 'texturas', n + '.webp')).toString('base64')}"`);
-html = html.replace(/url\(texturas\/([a-z-]+)\.webp\)/g, (_, n) =>
-  `url(data:image/webp;base64,${fs.readFileSync(path.join(__dirname, 'texturas', n + '.webp')).toString('base64')})`);
-html = html.replace(/url\(texturas\/([a-z-]+)\.woff2\)/g, (_, n) =>
-  `url(data:font/woff2;base64,${fs.readFileSync(path.join(__dirname, 'texturas', n + '.woff2')).toString('base64')})`);
-// Ilustraciones: web/elementales/<nombre de la carta>.webp
-const dirImg = path.join(__dirname, 'elementales');
-const imagenes = {};
-for (const f of fs.existsSync(dirImg) ? fs.readdirSync(dirImg) : []) {
-  if (f.endsWith('.webp')) imagenes[f.slice(0, -5).normalize('NFC')] = `data:image/webp;base64,${fs.readFileSync(path.join(dirImg, f)).toString('base64')}`;
+  let html = leer('web/jugar.html');
+  const poner = (marca, codigo) => {
+    if (!html.includes(marca)) throw new Error(`Falta ${marca} en jugar.html`);
+    if (codigo.includes('</script')) throw new Error('El código no puede contener </script>');
+    html = html.replace(marca, () => codigo);
+  };
+  // Texturas: se incrustan en el archivo para que funcione sin carpetas al lado
+  // En <img src="url(texturas/x.webp)"> se deja solo el data URI
+  html = html.replace(/src="url\(texturas\/([a-z-]+)\.webp\)"/g, (_, n) =>
+    `src="data:image/webp;base64,${fs.readFileSync(path.join(__dirname, 'texturas', n + '.webp')).toString('base64')}"`);
+  html = html.replace(/url\(texturas\/([a-z-]+)\.webp\)/g, (_, n) =>
+    `url(data:image/webp;base64,${fs.readFileSync(path.join(__dirname, 'texturas', n + '.webp')).toString('base64')})`);
+  html = html.replace(/url\(texturas\/([a-z-]+)\.woff2\)/g, (_, n) =>
+    `url(data:font/woff2;base64,${fs.readFileSync(path.join(__dirname, 'texturas', n + '.woff2')).toString('base64')})`);
+  // Ilustraciones: web/elementales/<nombre de la carta>.webp
+  const dirImg = path.join(__dirname, 'elementales');
+  const imagenes = {};
+  for (const f of fs.existsSync(dirImg) ? fs.readdirSync(dirImg) : []) {
+    if (f.endsWith('.webp')) imagenes[idioma === 'en' ? EN.nombres[f.slice(0, -5).normalize('NFC')] || f.slice(0, -5).normalize('NFC') : f.slice(0, -5).normalize('NFC')] = `data:image/webp;base64,${fs.readFileSync(path.join(dirImg, f)).toString('base64')}`;
+  }
+  poner('/*IMAGENES*/{}', JSON.stringify(imagenes));
+  // Sonidos: web/sonidos/<nombre>.mp3
+  const dirSon = path.join(__dirname, 'sonidos');
+  const sonidos = {};
+  for (const f of fs.existsSync(dirSon) ? fs.readdirSync(dirSon) : []) {
+    if (f.endsWith('.mp3')) sonidos[f.slice(0, -4)] = `data:audio/mpeg;base64,${fs.readFileSync(path.join(dirSon, f)).toString('base64')}`;
+  }
+  poner('/*SONIDOS*/{}', JSON.stringify(sonidos));
+  poner('/*ACCIONES*/', leer('maqueta/acciones.js'));
+  poner('/*MODULOS*/', modulos);
+  const salida = idioma === 'en' ? 'jugar-en.html' : 'jugar.html';
+  fs.writeFileSync(path.join(raiz, salida), html);
+  console.log(`${salida} generado (${Math.round(html.length / 1024)} KB)`);
+  return html;
 }
-poner('/*IMAGENES*/{}', JSON.stringify(imagenes));
-// Sonidos: web/sonidos/<nombre>.mp3
-const dirSon = path.join(__dirname, 'sonidos');
-const sonidos = {};
-for (const f of fs.existsSync(dirSon) ? fs.readdirSync(dirSon) : []) {
-  if (f.endsWith('.mp3')) sonidos[f.slice(0, -4)] = `data:audio/mpeg;base64,${fs.readFileSync(path.join(dirSon, f)).toString('base64')}`;
-}
-poner('/*SONIDOS*/{}', JSON.stringify(sonidos));
-poner('/*ACCIONES*/', leer('maqueta/acciones.js'));
-poner('/*MODULOS*/', modulos);
-fs.writeFileSync(path.join(raiz, 'jugar.html'), html);
+
+idioma = 'en';
+construir();
+idioma = 'es';
+const html = construir();
 
 // Versión para publicar como página (sin envoltura html/head/body; la pone quien la publica)
 const destino = process.argv[2];
@@ -69,4 +112,3 @@ if (destino) {
   fs.writeFileSync(destino, pagina);
   console.log(`versión para publicar: ${destino}`);
 }
-console.log(`mana/jugar.html generado (${Math.round(html.length / 1024)} KB)`);

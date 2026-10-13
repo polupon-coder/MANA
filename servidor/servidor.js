@@ -9,14 +9,17 @@ const path = require('node:path');
 
 const PUERTO = Number(process.env.PORT) || 3000;
 const JUEGO = path.join(__dirname, '..', 'jugar.html');
+const JUEGO_EN = path.join(__dirname, '..', 'jugar-en.html'); // versión en inglés, en /en
 const MAX_CUERPO = 2 * 1024 * 1024; // una partida exportada ocupa unas decenas de KB
 const CADUCA = 24 * 60 * 60 * 1000; // las partidas se borran tras un día sin cambios
 
 // La página es la misma que en claude.ai; aquí se le indica que hable con este servidor
 let pagina = '';
+let paginaEn = '';
+const conServidor = (html) => html.replace('<head>', '<head>\n<script>window.MANA_SERVIDOR = true;</script>');
 function cargarPagina() {
-  const html = fs.readFileSync(JUEGO, 'utf8');
-  pagina = html.replace('<head>', '<head>\n<script>window.MANA_SERVIDOR = true;</script>');
+  pagina = conServidor(fs.readFileSync(JUEGO, 'utf8'));
+  paginaEn = fs.existsSync(JUEGO_EN) ? conServidor(fs.readFileSync(JUEGO_EN, 'utf8')) : pagina;
 }
 cargarPagina();
 
@@ -67,9 +70,10 @@ const servidor = http.createServer(async (req, res) => {
   const ruta = url.searchParams.get('ruta');
   try {
     if (url.pathname === '/healthz') return json(res, 200, { ok: true });
-    if (url.pathname === '/' || url.pathname === '/index.html') {
+    const en = url.pathname === '/en' || url.pathname === '/en/';
+    if (en || url.pathname === '/' || url.pathname === '/index.html') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
-      return res.end(pagina);
+      return res.end(en ? paginaEn : pagina);
     }
     if (url.pathname === '/api/doc') {
       if (!rutaValida(ruta) || !esDoc(ruta)) return json(res, 400, { error: 'ruta' });

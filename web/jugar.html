@@ -103,6 +103,14 @@
   @keyframes latejugar { 50% { box-shadow: 0 0 32px 8px rgba(200, 170, 255, .45); } }
   @media (prefers-reduced-motion: reduce) { #splash .jugar { animation: none; } }
   #splash .firma-splash { position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; font-size: 12px; letter-spacing: .14em; color: #8a7a63; }
+  .idioma { font-size: 12px; letter-spacing: .12em; color: #a08a6c; }
+  .idioma b { color: #6b5a44; }
+  .idioma a { color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  #splash .idioma { position: absolute; top: 14px; right: 18px; z-index: 2; font-size: 14px; text-shadow: 0 1px 3px rgba(255, 250, 240, .9); }
+  .ventana .idioma { margin-top: 6px; text-align: center; }
+  .titulo-texto { font-family: 'Grandstander', sans-serif; font-weight: 700; font-size: 24px; line-height: 1; letter-spacing: .02em; text-transform: lowercase; color: #e2c39c;
+    text-shadow: 0 1px 0 #b8956a, 0 2px 0 #a5845c, 0 3px 5px rgba(90, 60, 30, .4); }
+  .movil .titulo-texto { font-size: 18px; }
   .firma { margin-top: 6px; font-size: 11px; letter-spacing: .12em; color: #a08a6c; }
   .titulo-inicio { width: 230px; margin: 4px 0 8px; }
   /* Inicio y sala de partida */
@@ -506,7 +514,7 @@
   <div class="columna"><div class="titulo img"><img src="url(texturas/titulo-santuarios.webp)" alt="Santuarios"></div><div class="panel col-der"><div id="santuarios"></div></div></div>
 </div>
 
-<div id="splash" role="dialog" aria-label="Mana"><div class="lienzo" id="lienzo"><img id="img-portada" src="url(texturas/portada.webp)" alt="Mana: los cuatro Elementales alrededor de una esfera de Maná"><img id="img-portada-movil" src="url(texturas/portada-movil.webp)" alt="Mana: los cuatro Elementales alrededor de una esfera de Maná"><div class="jugar" id="jugar" role="button" tabindex="0">Jugar</div></div><div class="firma-splash">Un juego de Pol Lupon</div></div>
+<div id="splash" role="dialog" aria-label="Mana"><div class="lienzo" id="lienzo"><img id="img-portada" src="url(texturas/portada.webp)" alt="Mana: los cuatro Elementales alrededor de una esfera de Maná"><img id="img-portada-movil" src="url(texturas/portada-movil.webp)" alt="Mana: los cuatro Elementales alrededor de una esfera de Maná"><div class="jugar" id="jugar" role="button" tabindex="0">Jugar</div></div><div class="firma-splash">Un juego de Pol Lupon</div><div class="idioma"><b>ES</b> · <a class="otro-idioma">EN</a></div></div>
 <div class="velo" id="velo"><div class="ventana" id="ventana"></div></div>
 <div id="avisos"></div>
 <div id="guia" hidden></div>
@@ -567,6 +575,10 @@ function colocarPortada() {
 if (location.search.includes('rapido')) $('splash').hidden = true; // ?rapido (pruebas): sin portada
 window.addEventListener('resize', colocarPortada);
 colocarPortada();
+// Cambio de idioma: la otra versión (en el servidor, /en; en archivo, jugar-en.html)
+const OTRO_IDIOMA = window.MANA_SERVIDOR ? '/en' : 'jugar-en.html';
+function enlazarIdioma() { for (const a of document.querySelectorAll('.otro-idioma')) a.href = OTRO_IDIOMA; }
+enlazarIdioma();
 function quitarPortada() { $('splash').hidden = true; }
 $('jugar').onclick = quitarPortada;
 $('jugar').onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') quitarPortada(); };
@@ -1433,7 +1445,8 @@ function inicio() {
     <input id="nombre" class="campo" maxlength="14" placeholder="TU NOMBRE" autocomplete="off" value="${limpiarNombre(leerNombre())}">
     <div class="elige-el" id="elige-el"></div>
     <div class="opciones" id="modo"></div><div id="detalle" class="detalle"></div>
-    <div class="firma">Un juego de Pol Lupon</div>`, [], false, true);
+    <div class="firma">Un juego de Pol Lupon</div><div class="idioma"><b>ES</b> · <a class="otro-idioma">EN</a></div>`, [], false, true);
+  enlazarIdioma();
   $('ventana').classList.add('yeso', 'portada');
   $('velo').classList.add('portada');
   $('nombre').oninput = () => { if (!p.turno) { mesaDeFondo(limpiarNombre($('nombre').value)); pintar(); } };
