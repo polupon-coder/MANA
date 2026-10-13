@@ -87,6 +87,20 @@
   .nombres-mesa { display: grid; gap: 8px; width: 100%; }
   .ventana.telon h2 { font-size: 22px; }
   .ventana.telon .botones { width: 100%; }
+  /* Portada ilustrada: pantalla completa; «Jugar» va sobre la esfera de Maná del centro */
+  #splash { position: fixed; left: 0; top: 0; z-index: 300; overflow: hidden; background: #f3e8d8 url(texturas/fondo.webp) center / cover; text-transform: uppercase; }
+  #splash[hidden] { display: none; }
+  #splash .lienzo { position: absolute; }
+  #splash .lienzo img { width: 100%; height: 100%; display: block; }
+  /* En el móvil la imagen se funde con el yeso por arriba y por abajo */
+  #splash .lienzo.fundido img { -webkit-mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); }
+  #splash .jugar { position: absolute; left: 49.25%; top: 74.6%; width: 14%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; color: #fff; font-weight: 700; letter-spacing: .12em; padding-left: .12em;
+    text-shadow: 0 2px 6px rgba(70, 30, 120, .7), 0 0 18px rgba(255, 255, 255, .5); animation: latejugar 2.2s ease-in-out infinite; outline: none; }
+  #splash .jugar:hover, #splash .jugar:focus-visible { box-shadow: 0 0 40px 10px rgba(200, 170, 255, .55); }
+  @keyframes latejugar { 50% { box-shadow: 0 0 32px 8px rgba(200, 170, 255, .45); } }
+  @media (prefers-reduced-motion: reduce) { #splash .jugar { animation: none; } }
+  #splash .firma-splash { position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; font-size: 12px; letter-spacing: .14em; color: #8a7a63; }
   .firma { margin-top: 6px; font-size: 11px; letter-spacing: .12em; color: #a08a6c; }
   .titulo-inicio { width: 230px; margin: 4px 0 8px; }
   /* Inicio y sala de partida */
@@ -490,6 +504,7 @@
   <div class="columna"><div class="titulo img"><img src="url(texturas/titulo-santuarios.webp)" alt="Santuarios"></div><div class="panel col-der"><div id="santuarios"></div></div></div>
 </div>
 
+<div id="splash" role="dialog" aria-label="Mana"><div class="lienzo" id="lienzo"><img src="url(texturas/portada.webp)" alt="Mana: los cuatro Elementales alrededor de una esfera de Maná"><div class="jugar" id="jugar" role="button" tabindex="0">Jugar</div></div><div class="firma-splash">Un juego de Pol Lupon</div></div>
 <div class="velo" id="velo"><div class="ventana" id="ventana"></div></div>
 <div id="avisos"></div>
 <div id="guia" hidden></div>
@@ -524,6 +539,30 @@ function escalar() {
 }
 window.addEventListener('resize', escalar);
 escalar();
+
+// Portada ilustrada: en ordenador llena la pantalla (recorta lo que sobre); en el móvil, a lo ancho y centrada
+function colocarPortada() {
+  const sp = $('splash');
+  if (!sp || sp.hidden) return;
+  const z = parseFloat(document.body.style.zoom) || 1;
+  sp.style.zoom = 1 / z; // fuera de la escala de la mesa: medidas de pantalla reales
+  const W = window.innerWidth, H = window.innerHeight;
+  sp.style.width = W + 'px'; sp.style.height = H + 'px';
+  const movil = document.documentElement.classList.contains('movil');
+  // en el móvil se recortan los lados para que el título quepa entero y la imagen se vea más grande
+  const k = movil ? (W * 1.6) / 1672 : Math.max(W / 1672, H / 941);
+  const w = 1672 * k, h = 941 * k;
+  const l = $('lienzo');
+  Object.assign(l.style, { width: w + 'px', height: h + 'px', left: (W - w) / 2 + 'px', top: (H - h) / 2 + 'px', fontSize: Math.max(15, w * (movil ? 0.014 : 0.02)) + 'px' });
+  $('splash').querySelector('.firma-splash').style.fontSize = Math.max(11, Math.min(W, H) * 0.016) + 'px';
+  l.classList.toggle('fundido', movil);
+}
+if (location.search.includes('rapido')) $('splash').hidden = true; // ?rapido (pruebas): sin portada
+window.addEventListener('resize', colocarPortada);
+colocarPortada();
+function quitarPortada() { $('splash').hidden = true; }
+$('jugar').onclick = quitarPortada;
+$('jugar').onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') quitarPortada(); };
 
 let p = null; // la partida
 let nuevas = []; // cartas que acaban de llegar a tu mano (se marcan como NUEVA)
