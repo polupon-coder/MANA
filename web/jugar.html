@@ -194,6 +194,7 @@
   #guia { position: absolute; z-index: 80; width: 270px; background: var(--mana); color: #fff; border-radius: 14px; padding: 11px 14px 10px;
     font-size: 12.5px; line-height: 1.45; box-shadow: 0 10px 28px rgba(76, 29, 149, .28); animation: aparece .25s ease-out; }
   #guia[hidden] { display: none; }
+  .opciones[hidden] { display: none; }
   #guia b { font-weight: 700; }
   #guia .apagar { display: block; margin-top: 6px; font-size: 10.5px; opacity: .8; text-decoration: underline; cursor: pointer; }
   #guia::after { content: ''; position: absolute; border: 8px solid transparent; }
@@ -593,6 +594,7 @@ $('jugar').onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') quitarPo
 let p = null; // la partida
 let nuevas = []; // cartas que acaban de llegar a tu mano (se marcan como NUEVA)
 let entreEras = false; // ventana de fin de Era abierta
+let tapado = false; // telón entre turnos en esta pantalla: la mesa está tapada hasta que la siguiente persona la destapa
 const VEL = location.search.includes('rapido') ? 0.02 : 1; // ?rapido acelera los turnos de los bots (pruebas)
 let ocupado = false; // mientras juegan los bots o hay una ventana de Era
 
@@ -816,7 +818,7 @@ function deshacer() {
   avisar(`Deshecho: ${u.texto}`, 2200);
   pintar();
 }
-const esMiTurno = () => p && !p.fin && !ocupado && !eligiendo && !entreEras && p.turno && p.turno.i === YO;
+const esMiTurno = () => p && !p.fin && !ocupado && !eligiendo && !entreEras && !tapado && p.turno && p.turno.i === YO;
 
 // ---------- Ventanas -------------------------------------------------------------------------
 function abrir(html, botones = [], ancha = false, fija = false) {
@@ -830,6 +832,7 @@ function abrir(html, botones = [], ancha = false, fija = false) {
     const b = e.target.closest('[data-b]');
     if (!b) return;
     const def = botones[Number(b.dataset.b)];
+    if (!def) return;
     if (def.inactivo) return;
     if (def.cierra !== false) cerrar();
     if (def.accion) def.accion();
@@ -1387,7 +1390,11 @@ const nombreElegido = () => { const n = limpiarNombre($('nombre').value) || 'Tú
 // ---------- Partida en esta pantalla (varias personas se pasan el dispositivo) ----------------------
 let nMesa = 2;
 let nombresMesa = ['Jugador 2', 'Jugador 3', 'Jugador 4'];
-const opcionesMesa = () => [2, 3, 4].map((k) => `<div class="opcion ${k === nMesa ? 'elegida' : ''}" data-n="${k}">${k} jugadores</div>`).join('');
+const opcionesMesa = () => [2, 3, 4].map((k) => `<div class="opcion ${k === nMesa ? 'elegida' : ''}" data-n="${k}">${k} personas</div>`).join('');
+// Bots que se suman a la partida en esta pantalla (en total, como mucho 4 jugadores)
+let botsMesa = 0;
+const opcionesBotsMesa = () => Array.from({ length: 5 - nMesa }, (_, k) =>
+  `<div class="opcion ${k === botsMesa ? 'elegida' : ''}" data-nb="${k}">${k === 0 ? 'Sin bots' : k === 1 ? '+1 bot' : `+${k} bots`}</div>`).join('');
 const camposMesa = () => Array.from({ length: nMesa - 1 }, (_, k) =>
   `<input class="campo mesa-nombre" maxlength="14" placeholder="JUGADOR ${k + 2}" autocomplete="off" value="${limpiarNombre(nombresMesa[k] || '')}">`).join('');
 function guardarNombresMesa() {
@@ -1401,23 +1408,27 @@ function partidaEnMesa(nombre, elemento) {
   enMesa = true;
   const lista = [{ nombre: nombre || 'Jugador 1', bot: false, local: true, elemento }];
   for (let k = 0; k < nMesa - 1; k++) lista.push({ nombre: nombresMesa[k] || `Jugador ${k + 2}`, bot: false, local: true });
+  const usados = new Set(lista.map((a) => a.nombre.toLowerCase()));
+  for (const x of NOMBRES_BOT.filter((x) => !usados.has(x.toLowerCase())).slice(0, botsMesa)) lista.push({ nombre: x, bot: true });
   empezarPartida(lista, Math.floor(Math.random() * 1e9));
 }
 
 // Telón entre turnos: tapa la mesa hasta que la siguiente persona dice que ya tiene el dispositivo
 function telon(i) {
   YO = i;
+  tapado = true;
   pasos = [];
   nuevas = [];
   abrir(`<span class="piedra esf-${p.jug[i].color}" style="width:72px;height:72px"></span>
     <h2>Turno de ${NOMBRES[i]}</h2><div class="texto">Pásale el dispositivo a <b>${NOMBRES[i]}</b>. Los demás, sin mirar.</div>`,
-  [{ texto: `Soy ${NOMBRES[i]}`, clase: 'verde', accion: () => { pintar(); } }], false, true);
+  [{ texto: `Soy ${NOMBRES[i]}`, clase: 'verde', accion: () => { tapado = false; pintar(); } }], false, true);
   $('ventana').classList.add('yeso', 'portada', 'telon');
   $('velo').classList.add('portada');
 }
 
 function inicio() {
   enMesa = false;
+  tapado = false;
   if (red && red.quitar) red.quitar();
   red = null;
   let n = 4;
@@ -1430,13 +1441,24 @@ function inicio() {
       ? `<div class="opciones" id="opciones">${opcionesBots()}</div><div class="opciones" id="nivel">${opcionesNivel()}</div><div class="boton verde ancho" id="empezar-bots">Empezar</div>`
       : modo === 'mesa'
       ? `<div class="opciones" id="n-mesa">${opcionesMesa()}</div><div class="nombres-mesa" id="nombres-mesa">${camposMesa()}</div>
+         <div class="opciones" id="bots-mesa">${opcionesBotsMesa()}</div><div class="opciones" id="nivel-mesa">${opcionesNivel()}</div>
          <div class="nota">Os pasáis el dispositivo: antes de cada turno se tapa la mesa para que nadie vea la mano del otro.</div>
          <div class="boton verde ancho" id="empezar-mesa">Empezar</div>`
       : `<div class="boton verde ancho" id="crear">Crear partida</div>
          <div class="unirse"><input id="codigo" maxlength="4" placeholder="CÓDIGO" autocomplete="off"><div class="boton lleno" id="unirme">Unirme</div></div>
          <div class="nota" id="aviso-red"></div>`;
     if (modo === 'mesa') {
-      $('n-mesa').onclick = (e) => { const o = e.target.closest('[data-n]'); if (!o) return; guardarNombresMesa(); nMesa = Number(o.dataset.n); $('n-mesa').innerHTML = opcionesMesa(); $('nombres-mesa').innerHTML = camposMesa(); };
+      // con 4 personas no caben bots; el nivel solo se ve si hay bots
+      const verBotsMesa = () => {
+        botsMesa = Math.min(botsMesa, 4 - nMesa);
+        $('bots-mesa').innerHTML = opcionesBotsMesa();
+        $('bots-mesa').hidden = nMesa === 4;
+        $('nivel-mesa').hidden = botsMesa === 0;
+      };
+      verBotsMesa();
+      $('n-mesa').onclick = (e) => { const o = e.target.closest('[data-n]'); if (!o) return; guardarNombresMesa(); nMesa = Number(o.dataset.n); $('n-mesa').innerHTML = opcionesMesa(); $('nombres-mesa').innerHTML = camposMesa(); verBotsMesa(); };
+      $('bots-mesa').onclick = (e) => { const o = e.target.closest('[data-nb]'); if (o) { botsMesa = Number(o.dataset.nb); verBotsMesa(); } };
+      activarNivel('nivel-mesa');
       $('empezar-mesa').onclick = () => { guardarNombresMesa(); cerrar(); partidaEnMesa(nombreElegido(), elementoElegido); };
     } else if (modo === 'bots') {
       $('opciones').onclick = (e) => { const o = e.target.closest('[data-n]'); if (o) { n = Number(o.dataset.n); $('opciones').innerHTML = opcionesBots(); } };
