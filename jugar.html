@@ -95,7 +95,9 @@
   #splash .lienzo img[hidden] { display: none; }
   #splash .firma-splash { text-shadow: 0 1px 3px rgba(255, 250, 240, .9); }
   /* En el móvil la imagen se funde con el yeso por arriba y por abajo */
-  #splash .lienzo.fundido img { -webkit-mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); }
+  /* ordenador: la portada se ve entera; los bordes que no llegan a la pantalla se funden con el yeso */
+  #splash .lienzo.fundido-v img { -webkit-mask-image: linear-gradient(transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(transparent, #000 7%, #000 93%, transparent); }
+  #splash .lienzo.fundido-h img { -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
   #splash .jugar { position: absolute; left: 49.25%; top: 74.6%; width: 14%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%;
     display: flex; align-items: center; justify-content: center; cursor: pointer; color: #fff; font-weight: 700; letter-spacing: .12em; padding-left: .12em;
     text-shadow: 0 2px 6px rgba(70, 30, 120, .7), 0 0 18px rgba(255, 255, 255, .5); animation: latejugar 2.2s ease-in-out infinite; outline: none; }
@@ -1564,12 +1566,17 @@ function colocarPortada() {
   // en el móvil se recortan los lados para que el título quepa entero y la imagen se vea más grande
   // móvil: portada vertical propia (941×1672); ordenador: la apaisada (1672×941). Ambas llenan la pantalla
   const [iw, ih] = movil ? [941, 1672] : [1672, 941];
-  const k = Math.max(W / iw, H / ih);
+  // móvil: llena la pantalla; ordenador: entera (sin recortar a los Elementales) y, si sobra, se funde con el fondo
+  let k = movil ? Math.max(W / iw, H / ih) : Math.min(W / iw, H / ih);
+  // si casi encaja, mejor llenar: un recorte de pocos píxeles no se nota y evita franjas finas
+  if (!movil && Math.max(W / iw, H / ih) / k < 1.02) k = Math.max(W / iw, H / ih);
   const w = iw * k, h = ih * k;
   $('img-portada').hidden = movil; $('img-portada-movil').hidden = !movil;
   // posición de la esfera de Maná en cada imagen
   Object.assign($('jugar').style, movil ? { left: '52.5%', top: '68.7%', width: '24%' } : { left: '49.25%', top: '74.6%', width: '14%' });
   const l = $('lienzo');
+  l.classList.toggle('fundido-v', !movil && h < H - 1);
+  l.classList.toggle('fundido-h', !movil && w < W - 1);
   Object.assign(l.style, { width: w + 'px', height: h + 'px', left: (W - w) / 2 + 'px', top: (H - h) / 2 + 'px', fontSize: Math.max(15, w * (movil ? 0.04 : 0.02)) + 'px' });
   $('splash').querySelector('.firma-splash').style.fontSize = Math.max(11, Math.min(W, H) * 0.016) + 'px';
 
